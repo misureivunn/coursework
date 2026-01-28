@@ -1,0 +1,16 @@
+services:
+  postgres-szi:
+    image: postgres:16
+    container_name: szi-postgres
+    environment:
+      POSTGRES_DB: szi_registry
+      POSTGRES_USER: szi_user
+      POSTGRES_PASSWORD: MyV3ryS3cur3P@ss2026!
+    ports:
+      - "5433:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+
+volumes:
+  pg_data:
