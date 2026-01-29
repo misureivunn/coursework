@@ -20,8 +20,11 @@ type SZIRecord struct {
 	UpdatedAt         time.Time `json:"updated_at"`
 	Manufacturer      string    `json:"manufacturer,omitempty"`
 	SoftwareVersion   string    `json:"software_version,omitempty" gorm:"column:software_version"`
-	ContactPerson     string    `json:"contact_person,omitempty" gorm:"column:contact_person"`
-	DocumentationLink string    `json:"documentation_link,omitempty" gorm:"column:documentation_link"`
+
+	// Поля для классификации СЗИ от НСД
+	Purpose         string `json:"purpose,omitempty" gorm:"column:purpose"`                         // Назначение (АС, ИВК, Универсальное)
+	DeploymentType  string `json:"deployment_type,omitempty" gorm:"column:deployment_type"`         // Тип развертывания (Клиент-сервер, Автономное, АПК, Виртуальное)
+	ClassProtection string `json:"class_protection,omitempty" gorm:"column:class_protection"`      // Класс защищенности (1, 2, 3А, 4, 5)
 }
 
 // права доступа

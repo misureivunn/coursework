@@ -9,6 +9,7 @@ import (
 	"gorm.io/gorm"
 	"szi-registry/models"
 	"szi-registry/services"
+	"szi-registry/utils/ui"
 )
 
 func ShowAddSziWindow(myApp fyne.App, userID uint, db *gorm.DB) {
@@ -16,7 +17,8 @@ func ShowAddSziWindow(myApp fyne.App, userID uint, db *gorm.DB) {
 	myWindow.Resize(fyne.NewSize(600, 500))
 
 	nameEntry := widget.NewEntry()
-	typeEntry := widget.NewEntry()
+	// Заменяем текстовое поле на выпадающий список для типа СЗИ
+	typeSelector := widget.NewSelect([]string{"СКЗИ", "ОС", "СЗИ КС", "СЗИ СКЗИ", "Другое"}, func(value string) {})
 	certNumberEntry := widget.NewEntry()
 
 	issueDateEntry := widget.NewEntry()
@@ -27,50 +29,55 @@ func ShowAddSziWindow(myApp fyne.App, userID uint, db *gorm.DB) {
 
 	locationEntry := widget.NewEntry()
 	manufacturerEntry := widget.NewEntry()
-	softwareVersionEntry := widget.NewEntry()
-	contactPersonEntry := widget.NewEntry()
-	documentationLinkEntry := widget.NewEntry()
+	softwareEntry := widget.NewEntry()
+
+	// Добавляем новые поля для классификации СЗИ от НСД
+	purposeSelector := widget.NewSelect([]string{"АС", "ИВК", "Универсальное"}, func(value string) {})
+	deploymentTypeSelector := widget.NewSelect([]string{"Клиент-сервер", "Автономное", "АПК", "Виртуальное"}, func(value string) {})
+	classProtectionSelector := widget.NewSelect([]string{"1", "2", "3А", "4", "5"}, func(value string) {})
 
 	form := &widget.Form{
 		Items: []*widget.FormItem{
 			{Text: "Наименование СЗИ", Widget: nameEntry},
-			{Text: "Тип СЗИ", Widget: typeEntry},
+			{Text: "Тип СЗИ", Widget: typeSelector},
+			{Text: "Назначение", Widget: purposeSelector},
+			{Text: "Тип развертывания", Widget: deploymentTypeSelector},
+			{Text: "Класс защищенности", Widget: classProtectionSelector},
 			{Text: "Номер сертификата", Widget: certNumberEntry},
 			{Text: "Дата выдачи (ГГГГ-ММ-ДД)", Widget: issueDateEntry},
 			{Text: "Срок действия (ГГГГ-ММ-ДД)", Widget: expiryDateEntry},
 			{Text: "Место установки", Widget: locationEntry},
 			{Text: "Производитель", Widget: manufacturerEntry},
-			{Text: "Версия ПО", Widget: softwareVersionEntry},
-			{Text: "Контактное лицо", Widget: contactPersonEntry},
-			{Text: "Ссылка на документацию", Widget: documentationLinkEntry},
+			{Text: "Версия ПО", Widget: softwareEntry},
 		},
 		OnSubmit: func() {
-			issueDate, err := time.Parse("2006-01-02", issueDateEntry.Text)
+			issueDate, err := ui.ParseDate(issueDateEntry.Text)
 			if err != nil {
-				dialog := widget.NewModalPopUp(widget.NewLabel("Неверный формат даты выдачи. Используйте ГГГГ-ММ-ДД"), myWindow.Canvas())
-				dialog.Show()
+				ui.ShowErrorDialog("Неверный формат даты выдачи. Используйте ГГГГ-ММ-ДД", myWindow.Canvas())
 				return
 			}
 
-			expiryDate, err := time.Parse("2006-01-02", expiryDateEntry.Text)
+			expiryDate, err := ui.ParseDate(expiryDateEntry.Text)
 			if err != nil {
-				dialog := widget.NewModalPopUp(widget.NewLabel("Неверный формат срока действия. Используйте ГГГГ-ММ-ДД"), myWindow.Canvas())
-				dialog.Show()
+				ui.ShowErrorDialog("Неверный формат срока действия. Используйте ГГГГ-ММ-ДД", myWindow.Canvas())
 				return
 			}
 
 			newRecord := &models.SZIRecord{
 				Name:              nameEntry.Text,
-				Type:              typeEntry.Text,
+				Type:              typeSelector.Selected, // Используем выбранный тип из выпадающего списка
 				CertNumber:        certNumberEntry.Text,
 				CertIssueDate:     issueDate,
 				CertExpiryDate:    expiryDate,
 				Location:          locationEntry.Text,
 				UserID:            userID, // Используем переданный ID пользователя
 				Manufacturer:      manufacturerEntry.Text,
-				SoftwareVersion:   softwareVersionEntry.Text,
-				ContactPerson:     contactPersonEntry.Text,
-				DocumentationLink: documentationLinkEntry.Text,
+				SoftwareVersion:   softwareEntry.Text,
+
+				// Добавляем новые поля для классификации СЗИ от НСД
+				Purpose:         purposeSelector.Selected,
+				DeploymentType:  deploymentTypeSelector.Selected,
+				ClassProtection: classProtectionSelector.Selected,
 			}
 
 			if expiryDate.Before(time.Now()) {
@@ -95,15 +102,13 @@ func ShowAddSziWindow(myApp fyne.App, userID uint, db *gorm.DB) {
 
 	// Устанавливаем минимальный размер для полей ввода
 	nameEntry.Resize(fyne.NewSize(350, 30))
-	typeEntry.Resize(fyne.NewSize(350, 30))
+	// typeSelector - это выпадающий список, ему не нужен метод Resize
 	certNumberEntry.Resize(fyne.NewSize(350, 30))
 	issueDateEntry.Resize(fyne.NewSize(350, 30))
 	expiryDateEntry.Resize(fyne.NewSize(350, 30))
 	locationEntry.Resize(fyne.NewSize(350, 30))
 	manufacturerEntry.Resize(fyne.NewSize(350, 30))
-	softwareVersionEntry.Resize(fyne.NewSize(350, 30))
-	contactPersonEntry.Resize(fyne.NewSize(350, 30))
-	documentationLinkEntry.Resize(fyne.NewSize(350, 30))
+	softwareEntry.Resize(fyne.NewSize(350, 30))
 
 	// Улучшенное оформление формы
 	scrollContainer := container.NewVScroll(form)

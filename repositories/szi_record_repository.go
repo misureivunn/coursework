@@ -36,15 +36,13 @@ func (r *SZIRecordRepository) FindByUserID(userID uint) ([]models.SZIRecord, err
 
 func (r *SZIRecordRepository) FindAccessibleByUserID(userID uint) ([]models.SZIRecord, error) {
 	var records []models.SZIRecord
-
-	err := r.DB.Raw(`
-		SELECT DISTINCT sr.*
-		FROM szi_records sr
-		LEFT JOIN access_permissions ap ON sr.id = ap.record_id
-		WHERE sr.user_id = ? OR ap.guest_user_id = ?
-		ORDER BY sr.name
-	`, userID, userID).Scan(&records).Error
-
+	
+	// Используем подзапрос для получения всех записей, доступных пользователю
+	subQuery := r.DB.Table("access_permissions").
+		Select("DISTINCT record_id").
+		Where("guest_user_id = ?", userID)
+	
+	err := r.DB.Where("user_id = ? OR id IN (?)", userID, subQuery).Order("name").Find(&records).Error
 	return records, err
 }
 
@@ -59,28 +57,39 @@ func (r *SZIRecordRepository) Delete(id uint) error {
 func (r *SZIRecordRepository) Search(userID uint, criteria map[string]interface{}) ([]models.SZIRecord, error) {
 	var records []models.SZIRecord
 
-	query := r.DB.Model(&models.SZIRecord{}).
-		Joins("LEFT JOIN access_permissions ap ON szi_records.id = ap.record_id").
-		Where("szi_records.user_id = ? OR ap.guest_user_id = ?", userID, userID)
+	// Создаем подзапрос для получения ID записей, к которым у пользователя есть доступ
+	subQuery := r.DB.Table("access_permissions").
+		Select("DISTINCT record_id").
+		Where("guest_user_id = ?", userID)
 
+	// Основной запрос с фильтрацией
+	query := r.DB.Where("user_id = ? OR id IN (?)", userID, subQuery)
+
+	// Применяем дополнительные критерии поиска
 	for field, value := range criteria {
 		switch field {
 		case "name":
-			query = query.Where("szi_records.name ILIKE ?", "%"+value.(string)+"%")
+			query = query.Where("name ILIKE ?", "%"+value.(string)+"%")
 		case "type":
-			query = query.Where("szi_records.type = ?", value)
+			query = query.Where("szi_type = ?", value)
 		case "location":
-			query = query.Where("szi_records.location ILIKE ?", "%"+value.(string)+"%")
+			query = query.Where("location ILIKE ?", "%"+value.(string)+"%")
 		case "status":
-			query = query.Where("szi_records.status = ?", value)
+			query = query.Where("status = ?", value)
 		case "cert_number":
-			query = query.Where("szi_records.cert_number ILIKE ?", "%"+value.(string)+"%")
+			query = query.Where("cert_number ILIKE ?", "%"+value.(string)+"%")
 		case "manufacturer":
-			query = query.Where("szi_records.manufacturer ILIKE ?", "%"+value.(string)+"%")
+			query = query.Where("manufacturer ILIKE ?", "%"+value.(string)+"%")
+		case "purpose":
+			query = query.Where("purpose = ?", value)
+		case "deployment_type":
+			query = query.Where("deployment_type = ?", value)
+		case "class_protection":
+			query = query.Where("class_protection = ?", value)
 		}
 	}
 
-	err := query.Order("szi_records.name").Find(&records).Error
+	err := query.Order("name").Find(&records).Error
 	return records, err
 }
 

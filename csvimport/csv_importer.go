@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-// ImportFromCSV импортирует записи СЗИ из CSV файла
+// импортирует записи СЗИ из CSV файла
 func ImportFromCSV(filename string, userID uint) ([]models.SZIRecord, error) {
 	// Открываем файл
 	file, err := os.Open(filename)
@@ -38,8 +38,8 @@ func ImportFromCSV(filename string, userID uint) ([]models.SZIRecord, error) {
 	expectedHeaders := []string{
 		"ID", "Наименование", "Тип", "Номер сертификата",
 		"Дата выдачи", "Срок действия", "Место установки",
-		"Статус", "Производитель", "Версия ПО", "Контактное лицо",
-		"Ссылка на документацию", "Дата создания", "Дата обновления",
+		"Статус", "Производитель", "Версия ПО", "Назначение",
+		"Тип развертывания", "Класс защищенности", "Дата создания", "Дата обновления",
 	}
 
 	if len(headers) != len(expectedHeaders) {
@@ -113,8 +113,11 @@ func ImportFromCSV(filename string, userID uint) ([]models.SZIRecord, error) {
 			UserID:            userID, // Привязываем к текущему пользователю
 			Manufacturer:      strings.TrimSpace(row[8]),
 			SoftwareVersion:   strings.TrimSpace(row[9]),
-			ContactPerson:     strings.TrimSpace(row[10]),
-			DocumentationLink: strings.TrimSpace(row[11]),
+
+			// Поля для классификации СЗИ от НСД
+			Purpose:         strings.TrimSpace(row[10]),
+			DeploymentType:  strings.TrimSpace(row[11]),
+			ClassProtection: strings.TrimSpace(row[12]),
 		}
 
 		// Парсим даты создания и обновления, если они указаны

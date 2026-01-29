@@ -29,8 +29,8 @@ func ExportToCSV(records []models.SZIRecord, filename string) error {
 	headers := []string{
 		"ID", "Наименование", "Тип", "Номер сертификата",
 		"Дата выдачи", "Срок действия", "Место установки",
-		"Статус", "Производитель", "Версия ПО", "Контактное лицо",
-		"Ссылка на документацию", "Дата создания", "Дата обновления",
+		"Статус", "Производитель", "Версия ПО", "Назначение",
+		"Тип развертывания", "Класс защищенности", "Дата создания", "Дата обновления",
 	}
 
 	err = writer.Write(headers)
@@ -51,8 +51,9 @@ func ExportToCSV(records []models.SZIRecord, filename string) error {
 			record.Status,                                  // Статус
 			record.Manufacturer,                            // Производитель
 			record.SoftwareVersion,                         // Версия ПО
-			record.ContactPerson,                           // Контактное лицо
-			record.DocumentationLink,                       // Ссылка на документацию
+			record.Purpose,                                 // Назначение
+			record.DeploymentType,                          // Тип развертывания
+			record.ClassProtection,                         // Класс защищенности
 			record.CreatedAt.Format("2006-01-02 15:04:05"), // Дата создания
 			record.UpdatedAt.Format("2006-01-02 15:04:05"), // Дата обновления
 		}

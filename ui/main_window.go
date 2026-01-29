@@ -2,13 +2,17 @@ package ui
 
 import (
 	"fmt"
+	"strings"
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/widget"
 	"gorm.io/gorm"
 	"szi-registry/export"
 	"szi-registry/models"
 	"szi-registry/services"
+	"szi-registry/utils/ui"
 	"time"
 )
 
@@ -49,22 +53,10 @@ func ShowMainWindow(myApp fyne.App, username string, db *gorm.DB) {
 
 			// Определяем статус на основе даты истечения
 			status := record.Status
-			expiryDate := record.CertExpiryDate
-			now := time.Now()
 
 			// Если статус не установлен явно, определяем его по дате истечения
 			if status == "" {
-				if expiryDate.Before(now) {
-					status = "Просрочено"
-				} else {
-					// Проверяем, если срок истекает в ближайшие 30 дней
-					in30Days := now.AddDate(0, 0, 30)
-					if expiryDate.Before(in30Days) {
-						status = "Скоро истекает"
-					} else {
-						status = "Актуально"
-					}
-				}
+				status = ui.GetRecordStatus(record)
 			}
 
 			rowData := []string{
@@ -76,7 +68,9 @@ func ShowMainWindow(myApp fyne.App, username string, db *gorm.DB) {
 				status,
 				record.Manufacturer,
 				record.SoftwareVersion,
-				record.ContactPerson,
+				record.Purpose,
+				record.DeploymentType,
+				record.ClassProtection,
 			}
 
 			tableData = append(tableData, rowData)
@@ -98,11 +92,7 @@ func ShowMainWindow(myApp fyne.App, username string, db *gorm.DB) {
 									err := services.DeleteSziRecord(db, uint(user.ID), currentRecord.ID)
 									if err != nil {
 										// Показать ошибку
-										errorDialog := widget.NewModalPopUp(
-											widget.NewLabel("Ошибка при удалении записи: "+err.Error()),
-											myWindow.Canvas(),
-										)
-										errorDialog.Show()
+										ui.ShowErrorDialog("Ошибка при удалении записи: "+err.Error(), myWindow.Canvas())
 									} else {
 										// Обновить окно
 										myWindow.Close()
@@ -128,12 +118,12 @@ func ShowMainWindow(myApp fyne.App, username string, db *gorm.DB) {
 	updateTableData(records)
 
 	// Определяем начальные ширины столбцов
-	initialColumnWidths := []float32{180, 100, 120, 100, 100, 80, 120, 100, 120, 100}
+	initialColumnWidths := []float32{250, 120, 140, 120, 120, 100, 150, 120, 120, 120, 120, 100}
 
-	// Создаем таблицу с 10 столбцами (9 данных + 1 для действий)
+	// Создаем таблицу с 12 столбцами (11 данных + 1 для действий)
 	table = widget.NewTable(
 		func() (int, int) {
-			return len(tableData), 10 // строки: записи из БД, 10 столбцов
+			return len(tableData), 12 // строки: записи из БД, 12 столбцов
 		},
 		func() fyne.CanvasObject {
 			// Возвращаем метку для обычных ячеек
@@ -144,7 +134,7 @@ func ShowMainWindow(myApp fyne.App, username string, db *gorm.DB) {
 			label := cell.(*widget.Label)
 
 			if id.Row < len(tableData) {
-				if id.Col < 9 {
+				if id.Col < 11 {
 					// Обычные данные
 					if id.Col < len(tableData[id.Row]) {
 						text := tableData[id.Row][id.Col]
@@ -152,7 +142,7 @@ func ShowMainWindow(myApp fyne.App, username string, db *gorm.DB) {
 					} else {
 						label.SetText("")
 					}
-				} else if id.Col == 9 {
+				} else if id.Col == 11 {
 					// Столбец действий
 					label.SetText("...")
 					label.Alignment = fyne.TextAlignCenter
@@ -171,7 +161,7 @@ func ShowMainWindow(myApp fyne.App, username string, db *gorm.DB) {
 
 	// Обработка нажатий на таблицу
 	table.OnSelected = func(id widget.TableCellID) {
-		if id.Col == 9 && id.Row < len(buttonActions) {
+		if id.Col == 11 && id.Row < len(buttonActions) {
 			// Показываем диалог выбора действия
 			actionMenu := widget.NewPopUpMenu(
 				&fyne.Menu{
@@ -188,7 +178,7 @@ func ShowMainWindow(myApp fyne.App, username string, db *gorm.DB) {
 	}
 
 	// Заголовки столбцов
-	headers := []string{"Наименование СЗИ", "Тип СЗИ", "№ сертификата", "Дата выдачи", "Срок действия", "Статус", "Производитель", "Версия ПО", "Контактное лицо", "Действия"}
+	headers := []string{"Наименование СЗИ", "Тип СЗИ", "№ сертификата", "Дата выдачи", "Срок действия", "Статус", "Производитель", "Версия ПО", "Назначение", "Тип развертывания", "Класс защищенности", "Действия"}
 	headerContainer := container.NewHBox()
 	for _, header := range headers {
 		label := widget.NewLabelWithStyle(header, fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
@@ -208,6 +198,12 @@ func ShowMainWindow(myApp fyne.App, username string, db *gorm.DB) {
 	locationFilter.SetPlaceHolder("Место установки...")
 	manufacturerFilter := widget.NewEntry()
 	manufacturerFilter.SetPlaceHolder("Производитель...")
+	purposeFilter := widget.NewSelectEntry([]string{"АС", "ИВК", "Универсальное"})
+	purposeFilter.SetPlaceHolder("Назначение...")
+	deploymentTypeFilter := widget.NewSelectEntry([]string{"Клиент-сервер", "Автономное", "АПК", "Виртуальное"})
+	deploymentTypeFilter.SetPlaceHolder("Тип развертывания...")
+	classProtectionFilter := widget.NewSelectEntry([]string{"1", "2", "3А", "4", "5"})
+	classProtectionFilter.SetPlaceHolder("Класс защищенности...")
 
 	// Функция для применения фильтров
 	applyFilters := func() {
@@ -228,15 +224,20 @@ func ShowMainWindow(myApp fyne.App, username string, db *gorm.DB) {
 		if manufacturerFilter.Text != "" {
 			filters["manufacturer"] = manufacturerFilter.Text
 		}
+		if purposeFilter.Text != "" {
+			filters["purpose"] = purposeFilter.Text
+		}
+		if deploymentTypeFilter.Text != "" {
+			filters["deployment_type"] = deploymentTypeFilter.Text
+		}
+		if classProtectionFilter.Text != "" {
+			filters["class_protection"] = classProtectionFilter.Text
+		}
 
 		filteredRecords, err := services.SearchSZIRecords(db, uint(user.ID), filters)
 		if err != nil {
 			// Показать ошибку
-			errorDialog := widget.NewModalPopUp(
-				widget.NewLabel("Ошибка при поиске записей: "+err.Error()),
-				myWindow.Canvas(),
-			)
-			errorDialog.Show()
+			ui.ShowErrorDialog("Ошибка при поиске записей: "+err.Error(), myWindow.Canvas())
 			return
 		}
 
@@ -252,16 +253,15 @@ func ShowMainWindow(myApp fyne.App, username string, db *gorm.DB) {
 		statusFilter.SetText("")
 		locationFilter.SetText("")
 		manufacturerFilter.SetText("")
+		purposeFilter.SetText("")
+		deploymentTypeFilter.SetText("")
+		classProtectionFilter.SetText("")
 
 		// Загружаем все записи снова
 		allRecords, err := services.GetUserRecords(db, uint(user.ID))
 		if err != nil {
 			// Показать ошибку
-			errorDialog := widget.NewModalPopUp(
-				widget.NewLabel("Ошибка при загрузке записей: "+err.Error()),
-				myWindow.Canvas(),
-			)
-			errorDialog.Show()
+			ui.ShowErrorDialog("Ошибка при загрузке записей: "+err.Error(), myWindow.Canvas())
 			return
 		}
 
@@ -271,12 +271,13 @@ func ShowMainWindow(myApp fyne.App, username string, db *gorm.DB) {
 	}
 
 	// Контейнер для фильтров
-	filterContainer := container.NewGridWithColumns(6,
+	filterContainer := container.NewGridWithColumns(7,
 		container.NewVBox(widget.NewLabel("Поиск по наименованию:"), nameFilter),
 		container.NewVBox(widget.NewLabel("Тип СЗИ:"), typeFilter),
 		container.NewVBox(widget.NewLabel("Статус:"), statusFilter),
 		container.NewVBox(widget.NewLabel("Место установки:"), locationFilter),
 		container.NewVBox(widget.NewLabel("Производитель:"), manufacturerFilter),
+		container.NewVBox(widget.NewLabel("Назначение:"), purposeFilter),
 		container.NewVBox(
 			widget.NewButton("Применить фильтры", applyFilters),
 			widget.NewButton("Сбросить фильтры", resetFilters),
@@ -302,6 +303,59 @@ func ShowMainWindow(myApp fyne.App, username string, db *gorm.DB) {
 		dialog.Show()
 	})
 
+
+	// Кнопка импорта из CSV
+	importBtn := widget.NewButton("Импорт из CSV", func() {
+		// Диалог для выбора CSV файла
+		fileDialog := dialog.NewFileOpen(func(reader fyne.URIReadCloser, err error) {
+			if err != nil {
+				dialog := widget.NewModalPopUp(
+					widget.NewLabel("Ошибка при открытии файла: "+err.Error()),
+					myWindow.Canvas(),
+				)
+				dialog.Show()
+				return
+			}
+
+			if reader == nil {
+				return // Пользователь отменил выбор файла
+			}
+
+			// Получаем путь к файлу
+			filePath := reader.URI().String()
+
+			// Вызываем сервис импорта
+			importedCount, err := services.ImportSziRecordsFromCSV(db, uint(user.ID), filePath)
+			if err != nil {
+				dialog := widget.NewModalPopUp(
+					widget.NewLabel("Ошибка при импорте из CSV: "+err.Error()),
+					myWindow.Canvas(),
+				)
+				dialog.Show()
+			} else {
+				// Обновляем данные в таблице
+				records, err := services.GetUserRecords(db, uint(user.ID))
+				if err != nil {
+					// В реальном приложении нужно обработать ошибку
+					records = []models.SZIRecord{} // Используем пустой массив
+				}
+
+				// Обновляем данные таблицы
+				updateTableData(records)
+				table.Refresh()
+
+				// Показываем сообщение об успешном импорте
+				dialog := widget.NewModalPopUp(
+					widget.NewLabel(fmt.Sprintf("Успешно импортировано %d записей из CSV", importedCount)),
+					myWindow.Canvas(),
+				)
+				dialog.Show()
+			}
+		}, myWindow)
+
+		fileDialog.SetFilter(storage.NewExtensionFileFilter([]string{".csv"}))
+		fileDialog.Show()
+	})
 
 	// Кнопка экспорта в CSV
 	exportBtn := widget.NewButton("Экспорт в CSV", func() {
@@ -355,13 +409,19 @@ func ShowMainWindow(myApp fyne.App, username string, db *gorm.DB) {
 		ShowLoginWindow(myApp, db)
 	})
 
+	// Создаем контейнер с заголовками и таблицей, чтобы они прокручивались вместе
+	tableWithHeaders := container.NewVBox(
+		headerContainer,
+		table,
+	)
+
 	// Создаем контейнер с правильным расположением элементов
 	content := container.NewBorder(
-		container.NewVBox(filterContainer, headerContainer), // верхняя часть - фильтры и заголовки
+		filterContainer,                                     // верхняя часть - фильтры
 		container.NewHBox(logoutBtn, addBtn),                // нижняя часть - основные кнопки
 		nil,                                                 // левая часть - нет
 		nil,                                                 // правая часть - нет
-		table,                                               // центральная часть - таблица
+		tableWithHeaders,                                    // центральная часть - заголовки и таблица
 	)
 
 	// Добавляем панель инструментов для межпользовательского взаимодействия
@@ -369,7 +429,11 @@ func ShowMainWindow(myApp fyne.App, username string, db *gorm.DB) {
 		shareBtn,
 		requestAccessBtn,
 		notificationsBtn,
+		importBtn,
 		exportBtn,
+		widget.NewButton("Статистика", func() {
+			showStatisticsWindow(myApp, uint(user.ID), db)
+		}),
 	)
 
 	// Объединяем основной контент с панелью инструментов
@@ -386,12 +450,20 @@ func ShowMainWindow(myApp fyne.App, username string, db *gorm.DB) {
 // createShareDialog создает диалог для предоставления доступа к записи другому пользователю
 func createShareDialog(parentWindow fyne.Window, currentUserID uint, db *gorm.DB) *widget.PopUp {
 	// Создаем элементы интерфейса для выбора записи и пользователя
-	recordSelector := widget.NewSelectEntry([]string{})
+	recordSelector := widget.NewEntry()
+	recordSelector.SetPlaceHolder("Введите название СЗИ")
 	userSelector := widget.NewSelectEntry([]string{})
 	permissionSelector := widget.NewSelect([]string{"r", "rw"}, func(string) {})
 
+	// Создаем контейнер для предложений записей
+	suggestionsContainer := container.NewVBox()
+
 	// Создаем диалог
 	var dialog *widget.PopUp
+
+	// Создаем списки записей и пользователей
+	var allRecords []models.SZIRecord
+	var filteredRecords []models.SZIRecord
 
 	// Загружаем доступные записи и пользователей
 	loadData := func() {
@@ -399,14 +471,12 @@ func createShareDialog(parentWindow fyne.Window, currentUserID uint, db *gorm.DB
 		records, err := services.GetUserRecords(db, currentUserID)
 		if err != nil {
 			// Обработка ошибки
+			fmt.Printf("Ошибка при загрузке записей: %v\n", err)
 			return
 		}
 
-		var recordOptions []string
-		for _, record := range records {
-			recordOptions = append(recordOptions, record.Name)
-		}
-		recordSelector.SetOptions(recordOptions)
+		allRecords = records
+		filteredRecords = records
 
 		// Загружаем всех пользователей, кроме текущего
 		allUsers, err := services.GetAllUsers(db)
@@ -425,40 +495,79 @@ func createShareDialog(parentWindow fyne.Window, currentUserID uint, db *gorm.DB
 		userSelector.SetOptions(userOptions)
 	}
 
+	// Функция для обновления списка записей на основе введенного текста
+	updateSuggestions := func() {
+		// Очищаем предыдущие предложения
+		suggestionsContainer.Objects = nil
+
+		// Фильтруем записи по введенному тексту
+		inputText := recordSelector.Text
+		filteredRecords = []models.SZIRecord{}
+
+		for _, record := range allRecords {
+			if containsSubstring(record.Name, inputText) {
+				filteredRecords = append(filteredRecords, record)
+			}
+		}
+
+		// Создаем кнопки для каждой подходящей записи
+		for _, record := range filteredRecords {
+			btn := widget.NewButton(record.Name, func() {
+				// При выборе записи, устанавливаем её название в поле ввода
+				recordSelector.SetText(record.Name)
+				// Скрываем список предложений
+				suggestionsContainer.Hide()
+			})
+			suggestionsContainer.Add(btn)
+		}
+
+		// Обновляем интерфейс
+		if len(filteredRecords) > 0 {
+			suggestionsContainer.Show()
+		} else {
+			suggestionsContainer.Hide()
+		}
+		suggestionsContainer.Refresh()
+	}
+
 	loadData()
+
+	// Обработчик изменения текста в поле ввода
+	recordSelector.OnChanged = func(text string) {
+		updateSuggestions()
+	}
 
 	// Кнопка подтверждения
 	confirmBtn := widget.NewButton("Поделиться", func() {
 		// Логика предоставления доступа
-		// Нужно найти ID выбранной записи и пользователя
-		records, err := services.GetUserRecords(db, currentUserID)
-		if err != nil {
-			// Показать ошибку
-			errorContent := container.NewVBox(
-				widget.NewLabel("Ошибка при загрузке записей: "+err.Error()),
-				widget.NewButton("OK", func() {
-					dialog.Hide()
-				}),
-			)
-			errorDialog := widget.NewModalPopUp(errorContent, parentWindow.Canvas())
-			errorDialog.Show()
-			return
-		}
-
+		// Нужно найти ID выбранной записи
 		var selectedRecordID uint
-		for _, record := range records {
+		var found bool
+
+		// Сначала ищем в исходном списке
+		for _, record := range allRecords {
 			if record.Name == recordSelector.Text {
 				selectedRecordID = record.ID
+				found = true
 				break
 			}
 		}
 
-		// Получаем всех пользователей снова для получения ID
-		allUsers, err := services.GetAllUsers(db)
-		if err != nil {
+		// Если не нашли, ищем в отфильтрованном списке
+		if !found {
+			for _, record := range filteredRecords {
+				if record.Name == recordSelector.Text {
+					selectedRecordID = record.ID
+					found = true
+					break
+				}
+			}
+		}
+
+		if !found {
 			// Показать ошибку
 			errorContent := container.NewVBox(
-				widget.NewLabel("Ошибка при загрузке пользователей: "+err.Error()),
+				widget.NewLabel("Выбранная запись не найдена"),
 				widget.NewButton("OK", func() {
 					dialog.Hide()
 				}),
@@ -468,8 +577,16 @@ func createShareDialog(parentWindow fyne.Window, currentUserID uint, db *gorm.DB
 			return
 		}
 
+		// Получаем ID выбранного пользователя
+		allUsers, err := services.GetAllUsers(db)
+		if err != nil {
+			// Показать ошибку
+			ui.ShowErrorDialog("Ошибка при загрузке пользователей: "+err.Error(), parentWindow.Canvas())
+			return
+		}
+
 		var selectedUserID uint
-		found := false
+		found = false
 		for _, user := range allUsers {
 			if user.Username == userSelector.Text && user.ID != currentUserID {
 				selectedUserID = user.ID
@@ -479,14 +596,7 @@ func createShareDialog(parentWindow fyne.Window, currentUserID uint, db *gorm.DB
 		}
 
 		if !found {
-			errorContent := container.NewVBox(
-				widget.NewLabel("Выбранный пользователь не найден"),
-				widget.NewButton("OK", func() {
-					dialog.Hide()
-				}),
-			)
-			errorDialog := widget.NewModalPopUp(errorContent, parentWindow.Canvas())
-			errorDialog.Show()
+			ui.ShowErrorDialog("Выбранный пользователь не найден", parentWindow.Canvas())
 			return
 		}
 
@@ -494,24 +604,10 @@ func createShareDialog(parentWindow fyne.Window, currentUserID uint, db *gorm.DB
 		err = services.GrantAccess(db, currentUserID, selectedUserID, selectedRecordID, permissionSelector.Selected, nil)
 		if err != nil {
 			// Показать ошибку
-			errorContent := container.NewVBox(
-				widget.NewLabel("Ошибка при предоставлении доступа: "+err.Error()),
-				widget.NewButton("OK", func() {
-					dialog.Hide()
-				}),
-			)
-			errorDialog := widget.NewModalPopUp(errorContent, parentWindow.Canvas())
-			errorDialog.Show()
+			ui.ShowErrorDialog("Ошибка при предоставлении доступа: "+err.Error(), parentWindow.Canvas())
 		} else {
 			// Показать успех
-			successContent := container.NewVBox(
-				widget.NewLabel("Доступ успешно предоставлен!"),
-				widget.NewButton("OK", func() {
-					dialog.Hide() // Закрываем основной диалог
-				}),
-			)
-			successDialog := widget.NewModalPopUp(successContent, parentWindow.Canvas())
-			successDialog.Show()
+			ui.ShowSuccessDialog("Доступ успешно предоставлен!", parentWindow.Canvas())
 		}
 	})
 
@@ -521,8 +617,9 @@ func createShareDialog(parentWindow fyne.Window, currentUserID uint, db *gorm.DB
 	})
 
 	dialogContent := container.NewVBox(
-		widget.NewLabel("Выберите запись:"),
+		widget.NewLabel("Название СЗИ:"),
 		recordSelector,
+		suggestionsContainer,
 		widget.NewLabel("Выберите пользователя:"),
 		userSelector,
 		widget.NewLabel("Выберите права доступа:"),
@@ -539,34 +636,131 @@ func createRequestAccessDialog(parentWindow fyne.Window, currentUserID uint, db 
 	var dialog *widget.PopUp
 
 	// Создаем элементы интерфейса для запроса доступа
-	recordIDEntry := widget.NewEntry()
-	recordIDEntry.SetPlaceHolder("ID записи")
+	recordSelector := widget.NewEntry()
+	recordSelector.SetPlaceHolder("Введите название СЗИ")
 	permissionSelector := widget.NewSelect([]string{"r", "rw"}, func(string) {})
 	messageEntry := widget.NewMultiLineEntry()
 	messageEntry.SetPlaceHolder("Сообщение владельцу")
 
-	// Кнопка подтверждения
-	confirmBtn := widget.NewButton("Запросить доступ", func() {
-		// Получаем ID записи из поля ввода
-		var recordID uint64
-		fmt.Sscanf(recordIDEntry.Text, "%d", &recordID)
+	// Создаем контейнер для предложений
+	suggestionsContainer := container.NewVBox()
 
-		// Получаем владельца записи
-		record, err := services.GetSZIRecord(db, currentUserID, uint(recordID))
+	// Создаем список записей для отображения
+	var allRecords []models.SZIRecord
+	var filteredRecords []models.SZIRecord
+
+	// Загружаем все доступные записи
+	loadRecords := func() {
+		// Получаем все записи, к которым у пользователя нет доступа
+		records, err := services.GetSziRecordsAccessibleByUserID(db, currentUserID)
 		if err != nil {
-			// Показать ошибку
-			errorDialog := widget.NewModalPopUp(
-				widget.NewLabel("Ошибка при получении информации о записи: "+err.Error()),
-				parentWindow.Canvas(),
-			)
-			errorDialog.Show()
+			// Обработка ошибки
+			fmt.Printf("Ошибка при загрузке записей: %v\n", err)
 			return
 		}
 
-		ownerID := record.UserID
+		// Получаем уже имеющиеся разрешения
+		permissions, err := services.GetUserPermissions(db, currentUserID)
+		if err != nil {
+			// Обработка ошибки
+			fmt.Printf("Ошибка при загрузке разрешений: %v\n", err)
+			return
+		}
+
+		// Создаем множество ID записей, к которым уже есть доступ
+		accessibleRecordIDs := make(map[uint]bool)
+		for _, perm := range permissions {
+			accessibleRecordIDs[perm.RecordID] = true
+		}
+
+		// Фильтруем записи, к которым нет доступа
+		allRecords = []models.SZIRecord{}
+		for _, record := range records {
+			// Добавляем только те записи, к которым нет доступа
+			if !accessibleRecordIDs[record.ID] {
+				allRecords = append(allRecords, record)
+			}
+		}
+
+		// Изначально все записи входят в фильтрованный список
+		filteredRecords = allRecords
+	}
+
+	// Функция для обновления списка записей на основе введенного текста
+	updateSuggestions := func() {
+		// Очищаем предыдущие предложения
+		suggestionsContainer.Objects = nil
+
+		// Фильтруем записи по введенному тексту
+		inputText := recordSelector.Text
+		filteredRecords = []models.SZIRecord{}
+
+		for _, record := range allRecords {
+			if containsSubstring(record.Name, inputText) {
+				filteredRecords = append(filteredRecords, record)
+			}
+		}
+
+		// Создаем кнопки для каждой подходящей записи
+		for _, record := range filteredRecords {
+			btn := widget.NewButton(record.Name, func() {
+				// При выборе записи, устанавливаем её название в поле ввода
+				recordSelector.SetText(record.Name)
+				// Скрываем список предложений
+				suggestionsContainer.Hide()
+			})
+			suggestionsContainer.Add(btn)
+		}
+
+		// Обновляем интерфейс
+		if len(filteredRecords) > 0 {
+			suggestionsContainer.Show()
+		} else {
+			suggestionsContainer.Hide()
+		}
+		suggestionsContainer.Refresh()
+	}
+
+	// Загружаем записи при открытии диалога
+	loadRecords()
+
+	// Обработчик изменения текста в поле ввода
+	recordSelector.OnChanged = func(text string) {
+		updateSuggestions()
+	}
+
+	// Кнопка подтверждения
+	confirmBtn := widget.NewButton("Запросить доступ", func() {
+		// Находим ID записи по названию
+		var selectedRecord *models.SZIRecord
+		for _, record := range allRecords {
+			if record.Name == recordSelector.Text {
+				selectedRecord = &record
+				break
+			}
+		}
+
+		if selectedRecord == nil {
+			// Проверяем также среди отфильтрованных записей
+			for _, record := range filteredRecords {
+				if record.Name == recordSelector.Text {
+					selectedRecord = &record
+					break
+				}
+			}
+		}
+
+		if selectedRecord == nil {
+			// Показать ошибку - запись не найдена
+			ui.ShowErrorDialog("Выбранная запись не найдена", parentWindow.Canvas())
+			return
+		}
+
+		// Получаем владельца записи
+		ownerID := selectedRecord.UserID
 
 		// Вызываем сервис для запроса доступа
-		err = services.RequestAccess(db, currentUserID, ownerID, uint(recordID), permissionSelector.Selected, messageEntry.Text)
+		err := services.RequestAccess(db, currentUserID, ownerID, selectedRecord.ID, permissionSelector.Selected, messageEntry.Text)
 		if err != nil {
 			// Показать ошибку
 			errorDialog := widget.NewModalPopUp(
@@ -592,8 +786,9 @@ func createRequestAccessDialog(parentWindow fyne.Window, currentUserID uint, db 
 	})
 
 	dialogContent := container.NewVBox(
-		widget.NewLabel("ID записи:"),
-		recordIDEntry,
+		widget.NewLabel("Название СЗИ:"),
+		recordSelector,
+		suggestionsContainer,
 		widget.NewLabel("Требуемые права:"),
 		permissionSelector,
 		widget.NewLabel("Сообщение владельцу:"),
@@ -603,6 +798,11 @@ func createRequestAccessDialog(parentWindow fyne.Window, currentUserID uint, db 
 
 	dialog = widget.NewModalPopUp(dialogContent, parentWindow.Canvas())
 	return dialog
+}
+
+// вспомогательная функция для проверки наличия подстроки в строке (без учета регистра)
+func containsSubstring(str, substr string) bool {
+	return strings.Contains(strings.ToLower(str), strings.ToLower(substr))
 }
 
 // создает диалог для просмотра уведомлений
@@ -616,65 +816,79 @@ func createNotificationsDialog(parentWindow fyne.Window, userID uint, db *gorm.D
 		notifications = []models.Notification{}
 	}
 
-	// Создаем список уведомлений
-	list := widget.NewList(
-		func() int {
-			return len(notifications)
-		},
-		func() fyne.CanvasObject {
-			return container.NewVBox(
-				widget.NewLabel("Title"),
-				widget.NewLabel("Message"),
-				widget.NewLabel("Details"),
-				widget.NewButton("Пометить как прочитанное", func() {}),
-			)
-		},
-		func(id widget.ListItemID, obj fyne.CanvasObject) {
-			cont := obj.(*fyne.Container)
-			labels := cont.Objects[:3]
-			button := cont.Objects[3].(*widget.Button)
+	var content fyne.CanvasObject
 
-			titleLabel := labels[0].(*widget.Label)
-			messageLabel := labels[1].(*widget.Label)
-			detailsLabel := labels[2].(*widget.Label)
+	if len(notifications) == 0 {
+		// Показываем сообщение, если уведомлений нет
+		noNotificationsLabel := widget.NewLabel("Уведомлений нет")
+		noNotificationsLabel.Alignment = fyne.TextAlignCenter
+		content = container.NewPadded(noNotificationsLabel)
+	} else {
+		// Создаем список уведомлений
+		list := widget.NewList(
+			func() int {
+				return len(notifications)
+			},
+			func() fyne.CanvasObject {
+				return container.NewVBox(
+					widget.NewLabel("Title"),
+					widget.NewLabel("Message"),
+					widget.NewLabel("Details"),
+					widget.NewButton("Пометить как прочитанное", func() {}),
+				)
+			},
+			func(id widget.ListItemID, obj fyne.CanvasObject) {
+				cont := obj.(*fyne.Container)
+				labels := cont.Objects[:3]
+				button := cont.Objects[3].(*widget.Button)
 
-			notification := notifications[id]
+				titleLabel := labels[0].(*widget.Label)
+				messageLabel := labels[1].(*widget.Label)
+				detailsLabel := labels[2].(*widget.Label)
 
-			status := "непрочитано"
-			if notification.ReadStatus {
-				status = "прочитано"
-			}
+				notification := notifications[id]
 
-			titleLabel.SetText("[" + notification.Type + "] " + notification.Title)
-			messageLabel.SetText(notification.Message)
-			detailsLabel.SetText("От: " + fmt.Sprintf("%d", notification.SenderID) + ", Статус: " + status)
-
-			button.SetText("Пометить как прочитанное")
-			button.Hidden = notification.ReadStatus // Скрываем кнопку, если уже прочитано
-
-			button.OnTapped = func() {
-				// Помечаем уведомление как прочитанное
-				err := services.MarkNotificationAsRead(db, uint(notification.ID))
-				if err != nil {
-					// Показать ошибку
-					errorDialog := widget.NewModalPopUp(
-						widget.NewLabel("Ошибка при пометке уведомления: "+err.Error()),
-						parentWindow.Canvas(),
-					)
-					errorDialog.Show()
-				} else {
-					// Обновляем список
-					parentWindow.Canvas().Content().Refresh()
+				status := "непрочитано"
+				if notification.ReadStatus {
+					status = "прочитано"
 				}
-			}
-		},
-	)
+
+				titleLabel.SetText("[" + notification.Type + "] " + notification.Title)
+				messageLabel.SetText(notification.Message)
+				detailsLabel.SetText("От: " + fmt.Sprintf("%d", notification.SenderID) + ", Статус: " + status)
+
+				button.SetText("Пометить как прочитанное")
+				button.Hidden = notification.ReadStatus // Скрываем кнопку, если уже прочитано
+
+				button.OnTapped = func() {
+					// Помечаем уведомление как прочитанное
+					err := services.MarkNotificationAsRead(db, uint(notification.ID))
+					if err != nil {
+						// Показать ошибку
+						errorDialog := widget.NewModalPopUp(
+							widget.NewLabel("Ошибка при пометке уведомления: "+err.Error()),
+							parentWindow.Canvas(),
+						)
+						errorDialog.Show()
+					} else {
+						// Обновляем список
+						parentWindow.Canvas().Content().Refresh()
+					}
+				}
+			},
+		)
+		content = list
+	}
 
 	closeBtn := widget.NewButton("Закрыть", func() {
 		dialog.Hide()
 	})
 
-	dialogContent := container.NewBorder(nil, closeBtn, nil, nil, list)
+	dialogContent := container.NewBorder(nil, closeBtn, nil, nil, content)
 	dialog = widget.NewModalPopUp(dialogContent, parentWindow.Canvas())
+
+	// Устанавливаем минимальный размер окна для большей ширины
+	dialog.Resize(fyne.NewSize(600, 400))
+
 	return dialog
 }

@@ -35,9 +35,9 @@ func ShowLoginWindow(myApp fyne.App, db *gorm.DB) {
 			// Authentication failed
 			errorLabel.SetText(err.Error())
 		} else {
-			// Authentication successful - show main window with user info
+			// Authentication successful - show dashboard with statistics
 			myWindow.Close()
-			ShowMainWindow(myApp, user.Username, db)
+			ShowDashboardWindow(myApp, user.Username, db)
 		}
 	}
 
