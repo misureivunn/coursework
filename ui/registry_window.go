@@ -32,6 +32,7 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 	currentPage := 0
 	var allRecords []models.SZIRecord
 
+
 	// Загрузка данных из базы данных для конкретного пользователя
 	records, err := services.GetUserRecords(db, uint(user.ID))
 	if err != nil {
@@ -234,6 +235,8 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 	purposeFilter.SetPlaceHolder("Назначение...")
 	deploymentTypeFilter := widget.NewSelectEntry([]string{"Клиент-сервер", "Автономное", "АПК", "Виртуальное"})
 	deploymentTypeFilter.SetPlaceHolder("Тип развертывания...")
+	classProtectionFilter := widget.NewSelectEntry([]string{"1", "2", "3А", "4", "5"})
+	classProtectionFilter.SetPlaceHolder("Класс защищенности...")
 
 	// Функция для применения фильтров
 	applyFilters := func() {
@@ -260,6 +263,9 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 		if deploymentTypeFilter.Text != "" {
 			filters["deployment_type"] = deploymentTypeFilter.Text
 		}
+		if classProtectionFilter.Text != "" {
+			filters["class_protection"] = classProtectionFilter.Text
+		}
 
 		filteredRecords, err := services.SearchSZIRecords(db, uint(user.ID), filters)
 		if err != nil {
@@ -285,6 +291,7 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 		manufacturerFilter.SetText("")
 		purposeFilter.SetText("")
 		deploymentTypeFilter.SetText("")
+		classProtectionFilter.SetText("")
 
 		// Загружаем все записи снова
 		allRecords, err := services.GetUserRecords(db, uint(user.ID))
@@ -303,13 +310,15 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 	}
 
 	// Контейнер для фильтров
-	filterContainer := container.NewGridWithColumns(7,
+	filterContainer := container.NewGridWithColumns(9,
 		container.NewVBox(widget.NewLabel("Поиск по наименованию:"), nameFilter),
 		container.NewVBox(widget.NewLabel("Тип СЗИ:"), typeFilter),
 		container.NewVBox(widget.NewLabel("Статус:"), statusFilter),
 		container.NewVBox(widget.NewLabel("Место установки:"), locationFilter),
 		container.NewVBox(widget.NewLabel("Производитель:"), manufacturerFilter),
 		container.NewVBox(widget.NewLabel("Назначение:"), purposeFilter),
+		container.NewVBox(widget.NewLabel("Тип развертывания:"), deploymentTypeFilter),
+		container.NewVBox(widget.NewLabel("Класс защищенности:"), classProtectionFilter),
 		container.NewVBox(
 			widget.NewButton("Применить фильтры", applyFilters),
 			widget.NewButton("Сбросить фильтры", resetFilters),
@@ -367,6 +376,7 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 		pageInfoLabel,
 		nextPageBtn,
 	)
+
 
 	// Кнопка импорта из CSV
 	importBtn := widget.NewButton("Импорт из CSV", func() {
