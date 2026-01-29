@@ -35,15 +35,29 @@ func ImportFromCSV(filename string, userID uint) ([]models.SZIRecord, error) {
 
 	// Проверяем заголовки
 	headers := records[0]
-	expectedHeaders := []string{
-		"ID", "Наименование", "Тип", "Номер сертификата",
-		"Дата выдачи", "Срок действия", "Место установки",
-		"Статус", "Производитель", "Версия ПО", "Назначение",
-		"Тип развертывания", "Класс защищенности", "Дата создания", "Дата обновления",
-	}
 
-	if len(headers) != len(expectedHeaders) {
-		return nil, fmt.Errorf("некорректное количество столбцов в CSV файле")
+	// Поддерживаем два формата заголовков: со старыми (с ID) и новыми (без ID)
+	var expectedHeaders []string
+	var hasIDColumn bool
+
+	if len(headers) == 15 { // со столбцом ID
+		expectedHeaders = []string{
+			"ID", "Наименование", "Тип", "Номер сертификата",
+			"Дата выдачи", "Срок действия", "Место установки",
+			"Статус", "Производитель", "Версия ПО", "Назначение",
+			"Тип развертывания", "Класс защищенности", "Дата создания", "Дата обновления",
+		}
+		hasIDColumn = true
+	} else if len(headers) == 14 { // без столбца ID
+		expectedHeaders = []string{
+			"Наименование", "Тип", "Номер сертификата",
+			"Дата выдачи", "Срок действия", "Место установки",
+			"Статус", "Производитель", "Версия ПО", "Назначение",
+			"Тип развертывания", "Класс защищенности", "Дата создания", "Дата обновления",
+		}
+		hasIDColumn = false
+	} else {
+		return nil, fmt.Errorf("некорректное количество столбцов в CSV файле: ожидается 14 или 15 столбцов, получено %d", len(headers))
 	}
 
 	// Сравниваем заголовки (без учета регистра и пробелов)
@@ -61,30 +75,32 @@ func ImportFromCSV(filename string, userID uint) ([]models.SZIRecord, error) {
 			return nil, fmt.Errorf("некорректное количество столбцов в строке %d", rowIndex+2)
 		}
 
-		// Парсим ID (может быть пустым для новых записей)
-		var id uint
-		if row[0] != "" {
-			parsedID, err := strconv.Atoi(row[0])
-			if err != nil {
-				return nil, fmt.Errorf("ошибка при парсинге ID в строке %d: %v", rowIndex+2, err)
-			}
-			id = uint(parsedID)
-		}
-
 		// Парсим дату выдачи
-		issueDate, err := time.Parse("2006-01-02", row[4])
+		issueDateIndex := 3
+		if hasIDColumn {
+			issueDateIndex = 4
+		}
+		issueDate, err := time.Parse("2006-01-02", row[issueDateIndex])
 		if err != nil {
 			return nil, fmt.Errorf("ошибка при парсинге даты выдачи в строке %d: %v", rowIndex+2, err)
 		}
 
 		// Парсим дату истечения
-		expiryDate, err := time.Parse("2006-01-02", row[5])
+		expiryDateIndex := 4
+		if hasIDColumn {
+			expiryDateIndex = 5
+		}
+		expiryDate, err := time.Parse("2006-01-02", row[expiryDateIndex])
 		if err != nil {
 			return nil, fmt.Errorf("ошибка при парсинге срока действия в строке %d: %v", rowIndex+2, err)
 		}
 
 		// Определяем статус на основе даты истечения
-		status := row[7]
+		statusIndex := 6
+		if hasIDColumn {
+			statusIndex = 7
+		}
+		status := row[statusIndex]
 		if status == "" {
 			now := time.Now()
 			if expiryDate.Before(now) {
@@ -101,28 +117,65 @@ func ImportFromCSV(filename string, userID uint) ([]models.SZIRecord, error) {
 		}
 
 		// Создаем запись СЗИ
-		sziRecord := models.SZIRecord{
-			ID:                id,
-			Name:              strings.TrimSpace(row[1]),
-			Type:              strings.TrimSpace(row[2]),
-			CertNumber:        strings.TrimSpace(row[3]),
-			CertIssueDate:     issueDate,
-			CertExpiryDate:    expiryDate,
-			Location:          strings.TrimSpace(row[6]),
-			Status:            status,
-			UserID:            userID, // Привязываем к текущему пользователю
-			Manufacturer:      strings.TrimSpace(row[8]),
-			SoftwareVersion:   strings.TrimSpace(row[9]),
+		var sziRecord models.SZIRecord
 
-			// Поля для классификации СЗИ от НСД
-			Purpose:         strings.TrimSpace(row[10]),
-			DeploymentType:  strings.TrimSpace(row[11]),
-			ClassProtection: strings.TrimSpace(row[12]),
+		if hasIDColumn {
+			// Парсим ID (может быть пустым для новых записей)
+			var id uint
+			if row[0] != "" {
+				parsedID, err := strconv.Atoi(row[0])
+				if err != nil {
+					return nil, fmt.Errorf("ошибка при парсинге ID в строке %d: %v", rowIndex+2, err)
+				}
+				id = uint(parsedID)
+			}
+
+			sziRecord = models.SZIRecord{
+				ID:                id,
+				Name:              strings.TrimSpace(row[1]),
+				Type:              strings.TrimSpace(row[2]),
+				CertNumber:        strings.TrimSpace(row[3]),
+				CertIssueDate:     issueDate,
+				CertExpiryDate:    expiryDate,
+				Location:          strings.TrimSpace(row[6]),
+				Status:            status,
+				UserID:            userID, // Привязываем к текущему пользователю
+				Manufacturer:      strings.TrimSpace(row[8]),
+				SoftwareVersion:   strings.TrimSpace(row[9]),
+
+				// Поля для классификации СЗИ от НСД
+				Purpose:         strings.TrimSpace(row[10]),
+				DeploymentType:  strings.TrimSpace(row[11]),
+				ClassProtection: strings.TrimSpace(row[12]),
+			}
+		} else {
+			// Если нет ID в файле, создаем запись без него
+			sziRecord = models.SZIRecord{
+				Name:              strings.TrimSpace(row[0]),
+				Type:              strings.TrimSpace(row[1]),
+				CertNumber:        strings.TrimSpace(row[2]),
+				CertIssueDate:     issueDate,
+				CertExpiryDate:    expiryDate,
+				Location:          strings.TrimSpace(row[5]),
+				Status:            status,
+				UserID:            userID, // Привязываем к текущему пользователю
+				Manufacturer:      strings.TrimSpace(row[7]),
+				SoftwareVersion:   strings.TrimSpace(row[8]),
+
+				// Поля для классификации СЗИ от НСД
+				Purpose:         strings.TrimSpace(row[9]),
+				DeploymentType:  strings.TrimSpace(row[10]),
+				ClassProtection: strings.TrimSpace(row[11]),
+			}
 		}
 
 		// Парсим даты создания и обновления, если они указаны
-		if row[12] != "" {
-			createdAt, err := time.Parse("2006-01-02 15:04:05", row[12])
+		createdAtIndex := 12
+		if hasIDColumn {
+			createdAtIndex = 13
+		}
+		if len(row) > createdAtIndex && row[createdAtIndex] != "" {
+			createdAt, err := parseDateTime(row[createdAtIndex])
 			if err != nil {
 				return nil, fmt.Errorf("ошибка при парсинге даты создания в строке %d: %v", rowIndex+2, err)
 			}
@@ -131,8 +184,12 @@ func ImportFromCSV(filename string, userID uint) ([]models.SZIRecord, error) {
 			sziRecord.CreatedAt = time.Now()
 		}
 
-		if row[13] != "" {
-			updatedAt, err := time.Parse("2006-01-02 15:04:05", row[13])
+		updatedAtIndex := 13
+		if hasIDColumn {
+			updatedAtIndex = 14
+		}
+		if len(row) > updatedAtIndex && row[updatedAtIndex] != "" {
+			updatedAt, err := parseDateTime(row[updatedAtIndex])
 			if err != nil {
 				return nil, fmt.Errorf("ошибка при парсинге даты обновления в строке %d: %v", rowIndex+2, err)
 			}
@@ -145,4 +202,42 @@ func ImportFromCSV(filename string, userID uint) ([]models.SZIRecord, error) {
 	}
 
 	return importedRecords, nil
+}
+
+// parseDateTime пытается распознать дату в различных форматах
+func parseDateTime(dateStr string) (time.Time, error) {
+	dateStr = strings.TrimSpace(dateStr)
+	if dateStr == "" {
+		return time.Time{}, fmt.Errorf("пустая строка даты")
+	}
+
+	// Основные форматы дат, которые могут использоваться
+	formats := []string{
+		"2006-01-02 15:04:05", // RFC3339
+		"2006-01-02T15:04:05Z07:00",
+		"2006-01-02T15:04:05",
+		"02.01.2006 15:04:05", // DD.MM.YYYY HH:MM:SS
+		"02/01/2006 15:04:05", // DD/MM/YYYY HH:MM:SS
+		"2006-01-02",          // Только дата
+		"02.01.2006",          // DD.MM.YYYY
+		"02/01/2006",          // DD/MM/YYYY
+		"02-Jan-2006",         // DD-Mon-YYYY
+		"02-Jan-2006 15:04:05", // DD-Mon-YYYY HH:MM:SS
+		"Jan 02, 2006",        // Mon DD, YYYY
+		"Jan 02, 2006 15:04:05", // Mon DD, YYYY HH:MM:SS
+		"1",                   // Если просто число, считаем это годом
+	}
+
+	for _, format := range formats {
+		if t, err := time.Parse(format, dateStr); err == nil {
+			return t, nil
+		}
+	}
+
+	// Если строка содержит только число, предполагаем, что это год
+	if year, err := strconv.Atoi(dateStr); err == nil && year > 1900 && year < 2100 {
+		return time.Date(year, 1, 1, 0, 0, 0, 0, time.UTC), nil
+	}
+
+	return time.Time{}, fmt.Errorf("не удалось распознать формат даты: %s", dateStr)
 }

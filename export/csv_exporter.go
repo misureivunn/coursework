@@ -4,7 +4,6 @@ import (
 	"encoding/csv"
 	"fmt"
 	"os"
-	"strconv"
 	"szi-registry/models"
 	"szi-registry/utils"
 )
@@ -25,9 +24,9 @@ func ExportToCSV(records []models.SZIRecord, filename string) error {
 	writer := csv.NewWriter(file)
 	defer writer.Flush()
 
-	// Записываем заголовки
+	// Записываем заголовки (без ID)
 	headers := []string{
-		"ID", "Наименование", "Тип", "Номер сертификата",
+		"Наименование", "Тип", "Номер сертификата",
 		"Дата выдачи", "Срок действия", "Место установки",
 		"Статус", "Производитель", "Версия ПО", "Назначение",
 		"Тип развертывания", "Класс защищенности", "Дата создания", "Дата обновления",
@@ -38,10 +37,9 @@ func ExportToCSV(records []models.SZIRecord, filename string) error {
 		return utils.HandleError("writer.Write headers", err)
 	}
 
-	// Записываем данные
+	// Записываем данные (без ID)
 	for _, record := range records {
 		row := []string{
-			strconv.Itoa(int(record.ID)), // ID
 			record.Name,                  // Наименование
 			record.Type,                  // Тип
 			record.CertNumber,            // Номер сертификата

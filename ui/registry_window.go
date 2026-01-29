@@ -35,26 +35,22 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 	// Загрузка данных из базы данных для конкретного пользователя
 	records, err := services.GetUserRecords(db, uint(user.ID))
 	if err != nil {
-		// В реальном приложении нужно обработать ошибку
-		records = []models.SZIRecord{} // Используем пустой массив
+		records = []models.SZIRecord{}
 	}
 
 	// Создаем таблицу
 	var table *widget.Table
 	table = widget.NewTable(
 		func() (int, int) {
-			return 0, 12 // инициализируем пустой таблицей
+			return 0, 12 
 		},
 		func() fyne.CanvasObject {
-			// Возвращаем метку для обычных ячеек
 			label := widget.NewLabel("")
 			return label
 		},
 		func(id widget.TableCellID, cell fyne.CanvasObject) {
-			// Заглушка, будет заменена позже
 		})
 
-	// Создаем метку информации о странице, которая будет обновляться
 	pageInfoLabel := widget.NewLabel("")
 
 	// Устанавливаем начальные ширины столбцов
@@ -65,37 +61,32 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 		}
 	}
 
-	// Функция для обновления информации о странице
+	// для обновления информации о странице
 	updatePageInfo := func() {
 		totalRecords := len(allRecords)
 		if totalRecords == 0 {
-			pageInfoLabel.SetText("Страница 1 из 1") // Если нет записей, показываем 1 из 1
+			pageInfoLabel.SetText("Страница 1 из 1")
 		} else {
 			totalPages := (totalRecords + pageSize - 1) / pageSize
 			pageInfoLabel.SetText(fmt.Sprintf("Страница %d из %d", currentPage+1, totalPages))
 		}
 	}
 
-	// Функция для обновления данных в таблице с учетом пагинации
+	// обновления данных в таблице с учетом страниц
 	updateTableData := func(data []models.SZIRecord) {
 		// Обновляем все записи
 		allRecords = data
 
-		// Проверяем, что текущая страница не выходит за границы
 		totalPages := 1
 		if len(data) > 0 {
 			totalPages = (len(data) + pageSize - 1) / pageSize
 		}
-
-		// Если текущая страница больше максимальной, устанавливаем на последнюю
 		if currentPage >= totalPages && totalPages > 0 {
 			currentPage = totalPages - 1
 		} else if totalPages == 0 {
-			// Если нет записей, устанавливаем на первую страницу
 			currentPage = 0
 		}
 
-		// Вычисляем индексы для текущей страницы
 		startIndex := currentPage * pageSize
 		endIndex := startIndex + pageSize
 		if endIndex > len(data) {
@@ -393,23 +384,46 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 			// Получаем путь к файлу
 			filePath := uri.URI().String()[7:] // Убираем префикс "file://"
 
-			// Выполняем импорт
-			go func() {
-				// Вызываем сервис импорта
-				importedRecords, err := csvimport.ImportFromCSV(filePath, uint(user.ID))
-				if err != nil {
-					// Показываем ошибку
-					errorDialog := widget.NewModalPopUp(
-						widget.NewLabel("Ошибка при импорте из CSV: "+err.Error()),
-						myWindow.Canvas(),
-					)
-					errorDialog.Show()
-					return
-				}
+			// Вызываем сервис импорта
+			importedRecords, err := csvimport.ImportFromCSV(filePath, uint(user.ID))
+			if err != nil {
+				// Показываем ошибку
+				errorDialog := widget.NewModalPopUp(
+					widget.NewLabel("Ошибка при импорте из CSV: "+err.Error()),
+					myWindow.Canvas(),
+				)
+				errorDialog.Show()
+				return
+			}
 
-				// Сохраняем импортированные записи в базу данных
-				for _, record := range importedRecords {
-					err := db.Create(&record).Error
+			// Сохраняем импортированные записи в базу данных
+			var savedCount int
+			for _, record := range importedRecords {
+				// Проверяем, существует ли запись с таким же уникальным набором данных (имя, номер сертификата, пользователь)
+				var existingRecord models.SZIRecord
+				result := db.Where("name = ? AND cert_number = ? AND user_id = ?", record.Name, record.CertNumber, record.UserID).First(&existingRecord)
+
+				if result.Error != nil && result.Error.Error() == "record not found" {
+					// Записи с такими параметрами не существует, создаём новую (без указания ID, чтобы база данных сгенерировала новый)
+					newRecord := models.SZIRecord{
+						Name:              record.Name,
+						Type:              record.Type,
+						CertNumber:        record.CertNumber,
+						CertIssueDate:     record.CertIssueDate,
+						CertExpiryDate:    record.CertExpiryDate,
+						Location:          record.Location,
+						Status:            record.Status,
+						UserID:            record.UserID,
+						Manufacturer:      record.Manufacturer,
+						SoftwareVersion:   record.SoftwareVersion,
+						Purpose:           record.Purpose,
+						DeploymentType:    record.DeploymentType,
+						ClassProtection:   record.ClassProtection,
+						CreatedAt:         record.CreatedAt,
+						UpdatedAt:         record.UpdatedAt,
+					}
+
+					err := db.Create(&newRecord).Error
 					if err != nil {
 						// Показываем ошибку
 						errorDialog := widget.NewModalPopUp(
@@ -419,25 +433,62 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 						errorDialog.Show()
 						return
 					}
+					savedCount++
+				} else if result.Error == nil {
+					// Запись с такими параметрами существует, обновляем её
+					existingRecord.Name = record.Name
+					existingRecord.Type = record.Type
+					existingRecord.CertNumber = record.CertNumber
+					existingRecord.CertIssueDate = record.CertIssueDate
+					existingRecord.CertExpiryDate = record.CertExpiryDate
+					existingRecord.Location = record.Location
+					existingRecord.Status = record.Status
+					existingRecord.Manufacturer = record.Manufacturer
+					existingRecord.SoftwareVersion = record.SoftwareVersion
+					existingRecord.Purpose = record.Purpose
+					existingRecord.DeploymentType = record.DeploymentType
+					existingRecord.ClassProtection = record.ClassProtection
+					existingRecord.CreatedAt = record.CreatedAt
+					existingRecord.UpdatedAt = record.UpdatedAt
+
+					err := db.Save(&existingRecord).Error
+					if err != nil {
+						// Показываем ошибку
+						errorDialog := widget.NewModalPopUp(
+							widget.NewLabel("Ошибка при обновлении записи: "+err.Error()),
+							myWindow.Canvas(),
+						)
+						errorDialog.Show()
+						return
+					}
+					savedCount++
+				} else {
+					// Другая ошибка при поиске
+					errorDialog := widget.NewModalPopUp(
+						widget.NewLabel("Ошибка при проверке существующей записи: "+result.Error.Error()),
+						myWindow.Canvas(),
+					)
+					errorDialog.Show()
+					return
 				}
+			}
 
-				// Показываем сообщение об успешном импорте
-				var successDialog *widget.PopUp
+			// Показываем сообщение об успешном импорте
+			var successDialog *widget.PopUp
 
-				successDialog = widget.NewModalPopUp(
-					container.NewVBox(
-						widget.NewLabel(fmt.Sprintf("Успешно импортировано %d записей из CSV", len(importedRecords))),
-						widget.NewButton("OK", func() {
-							successDialog.Hide()
-							// Обновляем окно
-							ShowSZIRegistryWindow(myApp, username, db)
-							myWindow.Close()
-						}),
-					),
-					myWindow.Canvas(),
-				)
-				successDialog.Show()
-			}()
+			successDialog = widget.NewModalPopUp(
+				container.NewVBox(
+					widget.NewLabel(fmt.Sprintf("Успешно обработано %d записей из CSV", savedCount)),
+					widget.NewButton("OK", func() {
+						successDialog.Hide()
+						// Обновляем окно
+						ShowSZIRegistryWindow(myApp, username, db)
+						myWindow.Close()
+					}),
+				),
+				myWindow.Canvas(),
+			)
+			successDialog.Show()
 		}, myWindow)
 	})
 
