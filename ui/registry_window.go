@@ -18,7 +18,7 @@ import (
 // отображает окно с реестром СЗИ
 func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 	myWindow := myApp.NewWindow("Реестр СЗИ от НСД — Реестр")
-	myWindow.Resize(fyne.NewSize(1400, 600))
+	myWindow.Resize(fyne.NewSize(1400, 850))
 
 	// Получаем ID пользователя по имени
 	user, err := services.GetUserByUsername(db, username)
@@ -55,7 +55,21 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 	pageInfoLabel := widget.NewLabel("")
 
 	// Устанавливаем начальные ширины столбцов
-	initialColumnWidths := []float32{250, 120, 140, 120, 120, 100, 150, 120, 120, 120, 120, 100}
+	initialColumnWidths := []float32{
+		170, // Наименование СЗИ (было 250)
+		85,  // Тип СЗИ (было 120)
+		110, // № сертификата (было 140)
+		95,  // Дата выдачи (было 120)
+		95,  // Срок действия (было 120)
+		85,  // Статус (было 100)
+		110, // Производитель (было 150)
+		85,  // Версия ПО (было 120)
+		90,  // Назначение (было 120)
+		95,  // Тип развертывания (было 120)
+		80,  // Класс защищенности (было 120)
+		75,  // Действия (было 100)
+	}
+	// Сумма = 1175px (влезает с запасом)
 	for i, width := range initialColumnWidths {
 		if i < len(initialColumnWidths) {
 			table.SetColumnWidth(i, width)
@@ -309,14 +323,18 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 		updateTableData(allRecords)
 	}
 
-	// Контейнер для фильтров
-	filterContainer := container.NewGridWithColumns(9,
+	// Контейнер для фильтров - разбиваем на 3 ряда для компактности
+	filterContainer := container.NewGridWithColumns(3,
 		container.NewVBox(widget.NewLabel("Поиск по наименованию:"), nameFilter),
 		container.NewVBox(widget.NewLabel("Тип СЗИ:"), typeFilter),
 		container.NewVBox(widget.NewLabel("Статус:"), statusFilter),
+	)
+	filterContainer2 := container.NewGridWithColumns(3,
 		container.NewVBox(widget.NewLabel("Место установки:"), locationFilter),
 		container.NewVBox(widget.NewLabel("Производитель:"), manufacturerFilter),
 		container.NewVBox(widget.NewLabel("Назначение:"), purposeFilter),
+	)
+	filterContainer3 := container.NewGridWithColumns(3,
 		container.NewVBox(widget.NewLabel("Тип развертывания:"), deploymentTypeFilter),
 		container.NewVBox(widget.NewLabel("Класс защищенности:"), classProtectionFilter),
 		container.NewVBox(
@@ -324,6 +342,8 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 			widget.NewButton("Сбросить фильтры", resetFilters),
 		),
 	)
+
+	allFiltersContainer := container.NewVBox(filterContainer, filterContainer2, filterContainer3)
 
 	// Кнопки управления
 	addBtn := widget.NewButton("Добавить СЗИ", func() {
@@ -547,7 +567,7 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 
 	// Создаем контейнер с фиксированной высотой для области с таблицей
 	tableArea := container.NewVBox(scrollContainer)
-	tableArea.Objects[0].(*container.Scroll).SetMinSize(fyne.NewSize(1400, 400))
+	tableArea.Objects[0].(*container.Scroll).SetMinSize(fyne.NewSize(1350, 350))
 
 	// Создаем контейнер с заголовками и таблицей, чтобы они прокручивались вместе
 	tableWithHeaders := container.NewVBox(
@@ -555,12 +575,9 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 		tableArea,
 	)
 
-	// Увеличиваем размер окна для отображения большего количества строк
-	myWindow.Resize(fyne.NewSize(1400, 800))
-
 	// Создаем контейнер с правильным расположением элементов
 	content := container.NewBorder(
-		filterContainer, // верхняя часть - фильтры
+		allFiltersContainer, // верхняя часть - фильтры в 3 ряда
 		container.NewBorder(nil, paginationContainer, nil, nil, controlButtonsContainer), // нижняя часть - кнопки управления и навигация
 		nil, // левая часть - нет
 		nil, // правая часть - нет
