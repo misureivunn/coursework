@@ -18,7 +18,7 @@ import (
 // отображает окно с реестром СЗИ
 func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 	myWindow := myApp.NewWindow("Реестр СЗИ от НСД — Реестр")
-	myWindow.Resize(fyne.NewSize(1400, 600))
+	myWindow.Resize(fyne.NewSize(1400, 850))
 
 	// Получаем ID пользователя по имени
 	user, err := services.GetUserByUsername(db, username)
@@ -32,7 +32,6 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 	currentPage := 0
 	var allRecords []models.SZIRecord
 
-
 	// Загрузка данных из базы данных для конкретного пользователя
 	records, err := services.GetUserRecords(db, uint(user.ID))
 	if err != nil {
@@ -43,7 +42,7 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 	var table *widget.Table
 	table = widget.NewTable(
 		func() (int, int) {
-			return 0, 12 
+			return 0, 12
 		},
 		func() fyne.CanvasObject {
 			label := widget.NewLabel("")
@@ -54,8 +53,8 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 
 	pageInfoLabel := widget.NewLabel("")
 
-	// Устанавливаем начальные ширины столбцов
-	initialColumnWidths := []float32{250, 120, 140, 120, 120, 100, 150, 120, 120, 120, 120, 100}
+	// Оптимизированные ширины для экрана 1440x900 (сумма ~1175px)
+	initialColumnWidths := []float32{170, 85, 110, 95, 95, 85, 110, 85, 90, 95, 80, 75}
 	for i, width := range initialColumnWidths {
 		if i < len(initialColumnWidths) {
 			table.SetColumnWidth(i, width)
@@ -148,7 +147,6 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 		// Обновляем информацию о странице
 		updatePageInfo()
 	}
-
 
 	// Обработка нажатий на таблицу
 	table.OnSelected = func(id widget.TableCellID) {
@@ -374,7 +372,6 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 		nextPageBtn,
 	)
 
-
 	importBtn := widget.NewButton("Импорт из CSV", func() {
 		dialog.ShowFileOpen(func(uri fyne.URIReadCloser, err error) {
 			if err != nil {
@@ -404,21 +401,21 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 				if result.Error != nil && result.Error.Error() == "record not found" {
 					// Записи с такими параметрами не существует, создаём новую (без указания ID, чтобы база данных сгенерировала новый)
 					newRecord := models.SZIRecord{
-						Name:              record.Name,
-						Type:              record.Type,
-						CertNumber:        record.CertNumber,
-						CertIssueDate:     record.CertIssueDate,
-						CertExpiryDate:    record.CertExpiryDate,
-						Location:          record.Location,
-						Status:            record.Status,
-						UserID:            record.UserID,
-						Manufacturer:      record.Manufacturer,
-						SoftwareVersion:   record.SoftwareVersion,
-						Purpose:           record.Purpose,
-						DeploymentType:    record.DeploymentType,
-						ClassProtection:   record.ClassProtection,
-						CreatedAt:         record.CreatedAt,
-						UpdatedAt:         record.UpdatedAt,
+						Name:            record.Name,
+						Type:            record.Type,
+						CertNumber:      record.CertNumber,
+						CertIssueDate:   record.CertIssueDate,
+						CertExpiryDate:  record.CertExpiryDate,
+						Location:        record.Location,
+						Status:          record.Status,
+						UserID:          record.UserID,
+						Manufacturer:    record.Manufacturer,
+						SoftwareVersion: record.SoftwareVersion,
+						Purpose:         record.Purpose,
+						DeploymentType:  record.DeploymentType,
+						ClassProtection: record.ClassProtection,
+						CreatedAt:       record.CreatedAt,
+						UpdatedAt:       record.UpdatedAt,
 					}
 
 					err := db.Create(&newRecord).Error
@@ -516,31 +513,39 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 	// Контейнер для кнопок управления
 	controlButtonsContainer := container.NewHBox(addBtn, editBtn, deleteBtn, importBtn, exportBtn)
 
-	// Обернем таблицу в прокручиваемый контейнер для отображения большего количества строк
+	// Обернем таблицу в прокручиваемый контейнер
 	scrollContainer := container.NewVScroll(table)
 
-	// Создаем контейнер с фиксированной высотой для области с таблицей
-	tableArea := container.NewVBox(scrollContainer)
-	tableArea.Objects[0].(*container.Scroll).SetMinSize(fyne.NewSize(1400, 400))
+	// Создаём контейнер с заголовками и таблицей с синхронизированной горизонтальной прокруткой
+	headerScroll := container.NewHScroll(headerTable)
+	tableScroll := scrollContainer
 
-	tableWithHeaders := container.NewVBox(
-		headerTable,  // Используем таблицу-заголовок
-		tableArea,
+	// Синхронизируем горизонтальную прокрутку
+	tableScroll.OnScrolled = func(pos fyne.Position) {
+		headerScroll.Offset = fyne.NewPos(pos.X, headerScroll.Offset.Y)
+		headerScroll.Refresh()
+	}
+
+	// Устанавливаем минимальный размер области таблицы для экрана 1440x900
+	tableScroll.SetMinSize(fyne.NewSize(1350, 350))
+
+	// Объединяем заголовки и таблицу
+	tableWithHeaders := container.NewBorder(
+		headerScroll, // Заголовки сверху
+		nil, nil, nil,
+		tableScroll, // Таблица в центре
 	)
-
-	// Увеличиваем размер окна для отображения большего количества строк
-	myWindow.Resize(fyne.NewSize(1400, 800))
 
 	// Создаем контейнер с правильным расположением элементов
 	content := container.NewBorder(
 		filterContainer, // верхняя часть - фильтры
 		container.NewBorder(nil, paginationContainer, nil, nil, controlButtonsContainer), // нижняя часть - кнопки управления и навигация
-		nil, // левая часть - нет
-		nil, // правая часть - нет
+		nil,              // левая часть - нет
+		nil,              // правая часть - нет
 		tableWithHeaders, // центральная часть - заголовки и таблица
 	)
 
-		// Кнопки навигации (слева)
+	// Кнопки навигации (слева)
 	navButtons := container.NewHBox(
 		widget.NewButton("Назад", func() {
 			myWindow.Close()
