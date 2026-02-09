@@ -55,7 +55,7 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 
 	pageInfoLabel := widget.NewLabel("")
 	// Устанавливаем высоту строки для отображения переносов текста
-	table.SetRowHeight(70)
+	table.SetRowHeight(0, float32(100.0))
 
 	// Оптимизированные ширины для экрана 1440x900 (сумма ~1175px)
 	initialColumnWidths := []float32{250, 120, 140, 120, 120, 100, 150, 120, 120, 150, 150, 100}
@@ -244,7 +244,7 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 		headerTable.UnselectAll()
 	}
 	// Устанавливаем высоту строки заголовков
-	headerTable.SetRowHeight(70)
+	headerTable.SetRowHeight(0, float32(70.0))
 
 	// Создаем поля для фильтрации
 	nameFilter := widget.NewEntry()
