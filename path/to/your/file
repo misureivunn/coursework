@@ -1,0 +1,37 @@
+// This file update moves filter buttons from filterContainer to toolbar and modifies the layout to use Border layout.
+
+// Change 1: Modifying filterContainer to have 8 columns
+// Updated around line 312
+// Remove the last column with filter buttons.
+
+// Assuming filterContainer is some kind of structure or component that defines the rendering of the UI here.
+
+filterContainer.columns = 8;  // Change from 9 to 8
+
+
+// Change 2: Modifying toolbar to use Border layout
+// Updated around line 570
+
+// Assuming you have a method to create the toolbar layout
+var toolbar = createToolbar();
+
+function createToolbar() {
+    var toolbar = new BorderLayout();
+    var leftPanel = new HBox();
+    var rightPanel = new HBox();
+
+    // Add navigation buttons to the left
+    leftPanel.add(new Button('Назад'));  // Add Back button
+    leftPanel.add(new Button('Выход'));  // Add Exit button
+
+    // Add filter buttons to the right
+    rightPanel.add(new Button('Применить фильтры')); // Add Apply Filters button
+    rightPanel.add(new Button('Сбросить фильтры'));  // Add Reset Filters button
+
+    // Assigning panels to the border layout
+    toolbar.setLeft(leftPanel);
+    toolbar.setRight(rightPanel);
+
+    return toolbar;
+}
+
