@@ -46,7 +46,7 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 		},
 	func() fyne.CanvasObject {
 		label := widget.NewLabel("")
-		label.Wrapping = fyne.TextWrapWord
+		label.Wrapping = fyne.TextWrapBreak  
 		label.Truncation = fyne.TextTruncateOff
 		return label
 	},
@@ -520,6 +520,10 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 		exportSuccessDialog.Show()
 	})
 
+		// Устанавливаем высоту строк для комфортного чтения (2-3 строки текста)
+	table.SetRowHeight(90)
+	headerTable.SetRowHeight(90)
+
 	// Контейнер для кнопок управления
 	controlButtonsContainer := container.NewHBox(addBtn, editBtn, deleteBtn, importBtn, exportBtn)
 
@@ -553,7 +557,7 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 
 	// Устанавливаем минимальный размер области таблицы для экрана 1440x900
 	// Учитываем window chrome и отступы (~120px)
-	tableScroll.SetMinSize(fyne.NewSize(1320, 350))
+	tableScroll.SetMinSize(fyne.NewSize(1360, 500))
 
 	// Объединяем заголовки и таблицу
 	tableWithHeaders := container.NewBorder(
