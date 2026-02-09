@@ -208,12 +208,34 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 
 	// Заголовки столбцов
 	headers := []string{"Наименование СЗИ", "Тип СЗИ", "№ сертификата", "Дата выдачи", "Срок действия", "Статус", "Производитель", "Версия ПО", "Назначение", "Тип развертывания", "Класс защищенности", "Действия"}
-	headerContainer := container.NewHBox()
-	for _, header := range headers {
-		label := widget.NewLabelWithStyle(header, fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
-		label.Alignment = fyne.TextAlignCenter
-		box := container.NewVBox(label, widget.NewSeparator())
-		headerContainer.Add(box)
+
+	// Создаём таблицу-заголовок с такой же структурой, как основная таблица
+	headerTable := widget.NewTable(
+		func() (int, int) {
+			return 1, 12 // Одна строка, 12 столбцов
+		},
+		func() fyne.CanvasObject {
+			label := widget.NewLabelWithStyle("", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
+			return label
+		},
+		func(id widget.TableCellID, cell fyne.CanvasObject) {
+			label := cell.(*widget.Label)
+			if id.Col < len(headers) {
+				label.SetText(headers[id.Col])
+				label.Alignment = fyne.TextAlignCenter
+			}
+		})
+
+	// Применяем те же ширины столбцов, что и к основной таблице
+	for i, width := range initialColumnWidths {
+		if i < 12 {
+			headerTable.SetColumnWidth(i, width)
+		}
+	}
+
+	// Делаем заголовок не кликабельным
+	headerTable.OnSelected = func(id widget.TableCellID) {
+		headerTable.UnselectAll()
 	}
 
 	// Создаем поля для фильтрации
@@ -501,9 +523,8 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 	tableArea := container.NewVBox(scrollContainer)
 	tableArea.Objects[0].(*container.Scroll).SetMinSize(fyne.NewSize(1400, 400))
 
-	// Создаем контейнер с заголовками и таблицей, чтобы они прокручивались вместе
 	tableWithHeaders := container.NewVBox(
-		headerContainer,
+		headerTable,  // Используем таблицу-заголовок
 		tableArea,
 	)
 
