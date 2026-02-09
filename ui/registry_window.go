@@ -180,11 +180,7 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 												err := services.DeleteSziRecord(db, uint(user.ID), selectedRecord.ID)
 												if err != nil {
 													// Показать ошибку
-													errorDialog := widget.NewModalPopUp(
-														widget.NewLabel("Ошибка при удалении записи: "+err.Error()),
-														myWindow.Canvas(),
-													)
-													errorDialog.Show()
+													ui.ShowErrorDialog("Ошибка при удалении записи: "+err.Error(), myWindow.Canvas())
 												} else {
 													// Обновить окно
 													ShowSZIRegistryWindow(myApp, username, db)
@@ -270,11 +266,7 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 		filteredRecords, err := services.SearchSZIRecords(db, uint(user.ID), filters)
 		if err != nil {
 			// Показать ошибку
-			errorDialog := widget.NewModalPopUp(
-				widget.NewLabel("Ошибка при поиске записей: "+err.Error()),
-				myWindow.Canvas(),
-			)
-			errorDialog.Show()
+			ui.ShowErrorDialog("Ошибка при поиске записей: "+err.Error(), myWindow.Canvas())
 			return
 		}
 
@@ -297,11 +289,7 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 		allRecords, err := services.GetUserRecords(db, uint(user.ID))
 		if err != nil {
 			// Показать ошибку
-			errorDialog := widget.NewModalPopUp(
-				widget.NewLabel("Ошибка при загрузке записей: "+err.Error()),
-				myWindow.Canvas(),
-			)
-			errorDialog.Show()
+			ui.ShowErrorDialog("Ошибка при загрузке записей: "+err.Error(), myWindow.Canvas())
 			return
 		}
 
@@ -327,19 +315,11 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 	})
 
 	editBtn := widget.NewButton("Редактировать", func() {
-		dialog := widget.NewModalPopUp(
-			widget.NewLabel("Пожалуйста, выберите запись для редактирования, нажав на столбец 'Действия' в нужной строке"),
-			myWindow.Canvas(),
-		)
-		dialog.Show()
+		ui.ShowErrorDialog("Пожалуйста, выберите запись для редактирования, нажав на столбец 'Действия' в нужной строке", myWindow.Canvas())
 	})
 
 	deleteBtn := widget.NewButton("Удалить", func() {
-		dialog := widget.NewModalPopUp(
-			widget.NewLabel("Пожалуйста, удалите запись, нажав на столбец 'Действия' в нужной строке"),
-			myWindow.Canvas(),
-		)
-		dialog.Show()
+		ui.ShowErrorDialog("Пожалуйста, выберите запись для удаления, нажав на столбец 'Действия' в нужной строке", myWindow.Canvas())
 	})
 
 	// Кнопки навигации по страницам
@@ -389,11 +369,7 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 			// Вызываем сервис импорта
 			importedRecords, err := csvimport.ImportFromCSV(filePath, uint(user.ID))
 			if err != nil {
-				errorDialog := widget.NewModalPopUp(
-					widget.NewLabel("Ошибка при импорте из CSV: "+err.Error()),
-					myWindow.Canvas(),
-				)
-				errorDialog.Show()
+				ui.ShowErrorDialog("Ошибка при импорте из CSV: "+err.Error(), myWindow.Canvas())
 				return
 			}
 
@@ -426,11 +402,7 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 					err := db.Create(&newRecord).Error
 					if err != nil {
 						// Показываем ошибку
-						errorDialog := widget.NewModalPopUp(
-							widget.NewLabel("Ошибка при сохранении записи: "+err.Error()),
-							myWindow.Canvas(),
-						)
-						errorDialog.Show()
+						ui.ShowErrorDialog("Ошибка при сохранении записи: "+err.Error(), myWindow.Canvas())
 						return
 					}
 					savedCount++
@@ -453,21 +425,13 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 					err := db.Save(&existingRecord).Error
 					if err != nil {
 						// Показываем ошибку
-						errorDialog := widget.NewModalPopUp(
-							widget.NewLabel("Ошибка при обновлении записи: "+err.Error()),
-							myWindow.Canvas(),
-						)
-						errorDialog.Show()
+						ui.ShowErrorDialog("Ошибка при обновлении записи: "+err.Error(), myWindow.Canvas())
 						return
 					}
 					savedCount++
 				} else {
 					// Другая ошибка при поиске
-					errorDialog := widget.NewModalPopUp(
-						widget.NewLabel("Ошибка при проверке существующей записи: "+result.Error.Error()),
-						myWindow.Canvas(),
-					)
-					errorDialog.Show()
+					ui.ShowErrorDialog("Ошибка при проверке существующей записи: "+result.Error.Error(), myWindow.Canvas())
 					return
 				}
 			}
@@ -497,11 +461,7 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 		records, err := services.GetUserRecords(db, uint(user.ID))
 		if err != nil {
 			// Показываем ошибку
-			errorDialog := widget.NewModalPopUp(
-				widget.NewLabel("Ошибка при загрузке данных для экспорта: "+err.Error()),
-				myWindow.Canvas(),
-			)
-			errorDialog.Show()
+			ui.ShowErrorDialog("Ошибка при загрузке данных для экспорта: "+err.Error(), myWindow.Canvas())
 			return
 		}
 
@@ -512,11 +472,7 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 		err = export.ExportToCSV(records, filename)
 		if err != nil {
 			// Показываем ошибку
-			errorDialog := widget.NewModalPopUp(
-				widget.NewLabel("Ошибка при экспорте в CSV: "+err.Error()),
-				myWindow.Canvas(),
-			)
-			errorDialog.Show()
+			ui.ShowErrorDialog("Ошибка при экспорте в CSV: "+err.Error(), myWindow.Canvas())
 			return
 		}
 
