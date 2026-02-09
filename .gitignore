@@ -1,0 +1,32 @@
+# Бинарники
+main
+szi-registry
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Тестовые/временные файлы
+*.db
+*.csv
+*_backup.go
+test.db
+
+# Директории
+/export/
+/logs/
+
+# Go
+*.test
+*.out
+vendor/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Docker
+.dockerignore
