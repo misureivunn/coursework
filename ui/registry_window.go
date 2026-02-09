@@ -520,50 +520,26 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 		exportSuccessDialog.Show()
 	})
 
-		// Устанавливаем высоту строк для комфортного чтения (2-3 строки текста)
-	table.SetRowHeight(90)
-	headerTable.SetRowHeight(90)
 
 	// Контейнер для кнопок управления
 	controlButtonsContainer := container.NewHBox(addBtn, editBtn, deleteBtn, importBtn, exportBtn)
 
+	// Устанавливаем высоту строк ДО создания контейнеров
+	table.SetRowHeight(0, float32(80))
+	headerTable.SetRowHeight(0, float32(80))
+
 	// Обернем таблицу в прокручиваемый контейнер
-	scrollContainer := container.NewVScroll(table)
+	tableScroll := container.NewVScroll(table)
+	tableScroll.SetMinSize(fyne.NewSize(1320, 450))
 
-	// Создаём контейнер с заголовками и таблицей с синхронизированной горизонтальной прокруткой
-	headerScroll := container.NewHScroll(headerTable)
-	tableScroll := scrollContainer
-
-	// Синхронизируем горизонтальную прокрутку (двунаправленную)
-	// Флаги для предотвращения рекурсии
-	var syncingFromTable, syncingFromHeader bool
-
-	tableScroll.OnScrolled = func(pos fyne.Position) {
-		if !syncingFromHeader {
-			syncingFromTable = true
-			headerScroll.Offset = fyne.NewPos(pos.X, headerScroll.Offset.Y)
-			headerScroll.Refresh()
-			syncingFromTable = false
-		}
-	}
-	headerScroll.OnScrolled = func(pos fyne.Position) {
-		if !syncingFromTable {
-			syncingFromHeader = true
-			tableScroll.Offset = fyne.NewPos(pos.X, tableScroll.Offset.Y)
-			tableScroll.Refresh()
-			syncingFromHeader = false
-		}
-	}
-
-	// Устанавливаем минимальный размер области таблицы для экрана 1440x900
-	// Учитываем window chrome и отступы (~120px)
-	tableScroll.SetMinSize(fyne.NewSize(1360, 500))
+	// Заголовки БЕЗ прокрутки - просто контейнер с фиксированной высотой
+	headerContainer := container.NewMax(headerTable)
 
 	// Объединяем заголовки и таблицу
 	tableWithHeaders := container.NewBorder(
-		headerScroll, // Заголовки сверху
+		headerContainer, // Заголовки сверху (БЕЗ скролла)
 		nil, nil, nil,
-		tableScroll, // Таблица в центре
+		tableScroll,     // Таблица в центре (СО скроллом)
 	)
 
 	// Создаем контейнер с правильным расположением элементов
