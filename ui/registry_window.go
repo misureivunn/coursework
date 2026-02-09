@@ -212,12 +212,36 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 
 	// Заголовки столбцов
 	headers := []string{"Наименование СЗИ", "Тип СЗИ", "№ сертификата", "Дата выдачи", "Срок действия", "Статус", "Производитель", "Версия ПО", "Назначение", "Тип развертывания", "Класс защищенности", "Действия"}
-	headerContainer := container.NewHBox()
-	for _, header := range headers {
-		label := widget.NewLabelWithStyle(header, fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
-		label.Alignment = fyne.TextAlignCenter
-		box := container.NewVBox(label, widget.NewSeparator())
-		headerContainer.Add(box)
+	columnCount := len(headers)
+
+	// Создаём таблицу-заголовок с такой же структурой, как основная таблица
+	headerTable := widget.NewTable(
+		func() (int, int) {
+			return 1, columnCount // Одна строка, количество столбцов равно количеству заголовков
+		},
+		func() fyne.CanvasObject {
+			label := widget.NewLabelWithStyle("", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
+			label.Alignment = fyne.TextAlignCenter
+			return label
+		},
+		func(id widget.TableCellID, cell fyne.CanvasObject) {
+			label, ok := cell.(*widget.Label)
+			if !ok || id.Col >= len(headers) {
+				return
+			}
+			label.SetText(headers[id.Col])
+		})
+
+	// Применяем те же ширины столбцов, что и к основной таблице
+	for i, width := range initialColumnWidths {
+		if i < columnCount {
+			headerTable.SetColumnWidth(i, width)
+		}
+	}
+
+	// Делаем заголовок не кликабельным
+	headerTable.OnSelected = func(id widget.TableCellID) {
+		headerTable.UnselectAll()
 	}
 
 	// Создаем поля для фильтрации
@@ -551,7 +575,7 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 
 	// Создаем контейнер с заголовками и таблицей, чтобы они прокручивались вместе
 	tableWithHeaders := container.NewVBox(
-		headerContainer,
+		headerTable,  // Используем таблицу-заголовок вместо headerContainer
 		tableArea,
 	)
 
