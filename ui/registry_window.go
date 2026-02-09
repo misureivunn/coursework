@@ -212,11 +212,12 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 
 	// Заголовки столбцов
 	headers := []string{"Наименование СЗИ", "Тип СЗИ", "№ сертификата", "Дата выдачи", "Срок действия", "Статус", "Производитель", "Версия ПО", "Назначение", "Тип развертывания", "Класс защищенности", "Действия"}
+	columnCount := len(headers)
 
 	// Создаём таблицу-заголовок с такой же структурой, как основная таблица
 	headerTable := widget.NewTable(
 		func() (int, int) {
-			return 1, 12 // Одна строка, 12 столбцов
+			return 1, columnCount // Одна строка, количество столбцов равно количеству заголовков
 		},
 		func() fyne.CanvasObject {
 			label := widget.NewLabelWithStyle("", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
@@ -224,15 +225,16 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 			return label
 		},
 		func(id widget.TableCellID, cell fyne.CanvasObject) {
-			label := cell.(*widget.Label)
-			if id.Col < len(headers) {
-				label.SetText(headers[id.Col])
+			label, ok := cell.(*widget.Label)
+			if !ok || id.Col >= len(headers) {
+				return
 			}
+			label.SetText(headers[id.Col])
 		})
 
 	// Применяем те же ширины столбцов, что и к основной таблице
 	for i, width := range initialColumnWidths {
-		if i < 12 {
+		if i < columnCount {
 			headerTable.SetColumnWidth(i, width)
 		}
 	}
