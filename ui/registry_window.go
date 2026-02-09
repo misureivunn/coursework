@@ -18,7 +18,7 @@ import (
 // отображает окно с реестром СЗИ
 func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 	myWindow := myApp.NewWindow("Реестр СЗИ от НСД — Реестр")
-	myWindow.Resize(fyne.NewSize(1400, 850))
+	myWindow.Resize(fyne.NewSize(1400, 820))
 
 	// Получаем ID пользователя по имени
 	user, err := services.GetUserByUsername(db, username)
@@ -69,7 +69,7 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 		80,  // Класс защищенности (было 120)
 		75,  // Действия (было 100)
 	}
-	// Сумма = 1175px (влезает с запасом)
+	// Сумма = 1175px (помещается с запасом)
 	for i, width := range initialColumnWidths {
 		if i < len(initialColumnWidths) {
 			table.SetColumnWidth(i, width)
@@ -567,7 +567,7 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 
 	// Создаем контейнер с фиксированной высотой для области с таблицей
 	tableArea := container.NewVBox(scrollContainer)
-	tableArea.Objects[0].(*container.Scroll).SetMinSize(fyne.NewSize(1350, 350))
+	tableArea.Objects[0].(*container.Scroll).SetMinSize(fyne.NewSize(1220, 350))
 
 	// Создаем контейнер с заголовками и таблицей, чтобы они прокручивались вместе
 	tableWithHeaders := container.NewVBox(
