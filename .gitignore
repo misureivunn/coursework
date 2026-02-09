@@ -10,6 +10,7 @@ szi-registry
 *.db
 *.csv
 *_backup.go
+*.bak
 test.db
 
 # Директории
