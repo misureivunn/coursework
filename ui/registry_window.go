@@ -517,17 +517,29 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 	tableScroll := scrollContainer
 
 	// Синхронизируем горизонтальную прокрутку (двунаправленную)
+	// Флаги для предотвращения рекурсии
+	var syncingFromTable, syncingFromHeader bool
+
 	tableScroll.OnScrolled = func(pos fyne.Position) {
-		headerScroll.Offset = fyne.NewPos(pos.X, headerScroll.Offset.Y)
-		headerScroll.Refresh()
+		if !syncingFromHeader {
+			syncingFromTable = true
+			headerScroll.Offset = fyne.NewPos(pos.X, headerScroll.Offset.Y)
+			headerScroll.Refresh()
+			syncingFromTable = false
+		}
 	}
 	headerScroll.OnScrolled = func(pos fyne.Position) {
-		tableScroll.Offset = fyne.NewPos(pos.X, tableScroll.Offset.Y)
-		tableScroll.Refresh()
+		if !syncingFromTable {
+			syncingFromHeader = true
+			tableScroll.Offset = fyne.NewPos(pos.X, tableScroll.Offset.Y)
+			tableScroll.Refresh()
+			syncingFromHeader = false
+		}
 	}
 
 	// Устанавливаем минимальный размер области таблицы для экрана 1440x900
-	tableScroll.SetMinSize(fyne.NewSize(1350, 350))
+	// Учитываем window chrome и отступы (~120px)
+	tableScroll.SetMinSize(fyne.NewSize(1320, 350))
 
 	// Объединяем заголовки и таблицу
 	tableWithHeaders := container.NewBorder(
