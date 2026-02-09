@@ -56,9 +56,7 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 	// Оптимизированные ширины для экрана 1440x900 (сумма ~1175px)
 	initialColumnWidths := []float32{170, 85, 110, 95, 95, 85, 110, 85, 90, 95, 80, 75}
 	for i, width := range initialColumnWidths {
-		if i < len(initialColumnWidths) {
-			table.SetColumnWidth(i, width)
-		}
+		table.SetColumnWidth(i, width)
 	}
 
 	// для обновления информации о странице
@@ -226,9 +224,7 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 
 	// Применяем те же ширины столбцов, что и к основной таблице
 	for i, width := range initialColumnWidths {
-		if i < 12 {
-			headerTable.SetColumnWidth(i, width)
-		}
+		headerTable.SetColumnWidth(i, width)
 	}
 
 	// Делаем заголовок не кликабельным
@@ -520,10 +516,14 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 	headerScroll := container.NewHScroll(headerTable)
 	tableScroll := scrollContainer
 
-	// Синхронизируем горизонтальную прокрутку
+	// Синхронизируем горизонтальную прокрутку (двунаправленную)
 	tableScroll.OnScrolled = func(pos fyne.Position) {
 		headerScroll.Offset = fyne.NewPos(pos.X, headerScroll.Offset.Y)
 		headerScroll.Refresh()
+	}
+	headerScroll.OnScrolled = func(pos fyne.Position) {
+		tableScroll.Offset = fyne.NewPos(pos.X, tableScroll.Offset.Y)
+		tableScroll.Refresh()
 	}
 
 	// Устанавливаем минимальный размер области таблицы для экрана 1440x900
