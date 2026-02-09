@@ -44,14 +44,18 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 		func() (int, int) {
 			return 0, 12
 		},
-		func() fyne.CanvasObject {
-			label := widget.NewLabel("")
-			return label
-		},
+	func() fyne.CanvasObject {
+		label := widget.NewLabel("")
+		label.Wrapping = fyne.TextWrapWord
+		label.Truncation = fyne.TextTruncateOff
+		return label
+	},
 		func(id widget.TableCellID, cell fyne.CanvasObject) {
 		})
 
 	pageInfoLabel := widget.NewLabel("")
+	// Устанавливаем высоту строки для отображения переносов текста
+	table.SetRowHeight(70)
 
 	// Оптимизированные ширины для экрана 1440x900 (сумма ~1175px)
 	initialColumnWidths := []float32{250, 120, 140, 120, 120, 100, 150, 120, 120, 150, 150, 100}
@@ -196,8 +200,14 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 						},
 					}, myWindow.Canvas())
 
-				// Показываем меню в позиции курсора
-				actionMenu.Show()
+				// Вычисляем позицию ячейки на экране
+				cellPos := fyne.NewPos(
+					float32(id.Col) * initialColumnWidths[id.Col],  // X координата
+					float32(id.Row+1) * 70,  // Y координата (высота строки 70px)
+				)
+				
+				// Показываем меню в позиции ячейки
+				actionMenu.ShowAtPosition(cellPos)
 			}
 		}
 	}
@@ -212,6 +222,8 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 		},
 		func() fyne.CanvasObject {
 			label := widget.NewLabelWithStyle("", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
+			label.Wrapping = fyne.TextWrapWord
+			label.Truncation = fyne.TextTruncateOff
 			return label
 		},
 		func(id widget.TableCellID, cell fyne.CanvasObject) {
@@ -231,6 +243,8 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 	headerTable.OnSelected = func(id widget.TableCellID) {
 		headerTable.UnselectAll()
 	}
+	// Устанавливаем высоту строки заголовков
+	headerTable.SetRowHeight(70)
 
 	// Создаем поля для фильтрации
 	nameFilter := widget.NewEntry()

@@ -8,41 +8,46 @@ import (
 	"szi-registry/models"
 )
 
-// ShowErrorDialog отображает диалог с сообщением об ошибке
 func ShowErrorDialog(message string, canvas fyne.Canvas) {
 	var dialog *widget.PopUp
 
 	content := widget.NewRichTextFromMarkdown("# Ошибка\n\n" + message)
 	content.Wrapping = fyne.TextWrapWord
 
-	dialog = widget.NewModalPopUp(
-		container.NewVBox(
-			content,
-			widget.NewButton("Закрыть", func() {
-				dialog.Hide()
-			}),
-		),
-		canvas,
+	// Создаём широкий контейнер
+	contentContainer := container.NewVBox(
+		content,
+		widget.NewButton("Закрыть", func() {
+			dialog.Hide()
+		}),
 	)
+
+	dialog = widget.NewModalPopUp(contentContainer, canvas)
+	
+	// Устанавливаем размер: широкий (600px) и низкий (150px)
+	dialog.Resize(fyne.NewSize(600, 150))
+	
 	dialog.Show()
 }
 
-// ShowSuccessDialog отображает диалог с сообщением об успешном выполнении
 func ShowSuccessDialog(message string, canvas fyne.Canvas) {
 	var dialog *widget.PopUp
 
 	content := widget.NewRichTextFromMarkdown("# Успешно\n\n" + message)
 	content.Wrapping = fyne.TextWrapWord
 
-	dialog = widget.NewModalPopUp(
-		container.NewVBox(
-			content,
-			widget.NewButton("Закрыть", func() {
-				dialog.Hide()
-			}),
-		),
-		canvas,
+	contentContainer := container.NewVBox(
+		content,
+		widget.NewButton("Закрыть", func() {
+			dialog.Hide()
+		}),
 	)
+
+	dialog = widget.NewModalPopUp(contentContainer, canvas)
+	
+	// Устанавливаем размер: широкий и низкий
+	dialog.Resize(fyne.NewSize(600, 150))
+	
 	dialog.Show()
 }
 
