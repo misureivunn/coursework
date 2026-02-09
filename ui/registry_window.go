@@ -310,7 +310,7 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 	}
 
 	// Контейнер для фильтров
-	filterContainer := container.NewGridWithColumns(9,
+	filterContainer := container.NewGridWithColumns(8,
 		container.NewVBox(widget.NewLabel("Поиск по наименованию:"), nameFilter),
 		container.NewVBox(widget.NewLabel("Тип СЗИ:"), typeFilter),
 		container.NewVBox(widget.NewLabel("Статус:"), statusFilter),
@@ -319,10 +319,6 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 		container.NewVBox(widget.NewLabel("Назначение:"), purposeFilter),
 		container.NewVBox(widget.NewLabel("Тип развертывания:"), deploymentTypeFilter),
 		container.NewVBox(widget.NewLabel("Класс защищенности:"), classProtectionFilter),
-		container.NewVBox(
-			widget.NewButton("Применить фильтры", applyFilters),
-			widget.NewButton("Сбросить фильтры", resetFilters),
-		),
 	)
 
 	// Кнопки управления
@@ -567,8 +563,8 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 		tableWithHeaders, // центральная часть - заголовки и таблица
 	)
 
-	// Добавляем панель инструментов
-	toolbar := container.NewHBox(
+		// Кнопки навигации (слева)
+	navButtons := container.NewHBox(
 		widget.NewButton("Назад", func() {
 			myWindow.Close()
 			ShowDashboardWindow(myApp, username, db)
@@ -578,6 +574,15 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 			ShowLoginWindow(myApp, db)
 		}),
 	)
+
+	// Кнопки фильтров (справа)
+	filterButtons := container.NewHBox(
+		widget.NewButton("Применить фильтры", applyFilters),
+		widget.NewButton("Сбросить фильтры", resetFilters),
+	)
+
+	// Объединяем в toolbar с Border layout
+	toolbar := container.NewBorder(nil, nil, navButtons, filterButtons, nil)
 
 	// Объединяем основной контент с панелью инструментов
 	finalContent := container.NewBorder(toolbar, nil, nil, nil, content)
