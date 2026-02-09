@@ -37,10 +37,7 @@ func NewDBManagerWithConfig(cfg *config.Config) (*DBManager, error) {
 	err = db.AutoMigrate(
 		&models.User{},
 		&models.SZIRecord{},
-		&models.AccessPermission{},
 		&models.UserRole{},
-		&models.Notification{},
-		&models.AccessRequest{},
 	)
 	if err != nil {
 		return nil, err

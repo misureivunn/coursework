@@ -70,11 +70,9 @@ func ShowAddSziWindow(myApp fyne.App, userID uint, db *gorm.DB) {
 				CertIssueDate:     issueDate,
 				CertExpiryDate:    expiryDate,
 				Location:          locationEntry.Text,
-				UserID:            userID, // Используем переданный ID пользователя
+				UserID:            userID,
 				Manufacturer:      manufacturerEntry.Text,
 				SoftwareVersion:   softwareEntry.Text,
-
-				// Добавляем новые поля для классификации СЗИ от НСД
 				Purpose:         purposeSelector.Selected,
 				DeploymentType:  deploymentTypeSelector.Selected,
 				ClassProtection: classProtectionSelector.Selected,
@@ -100,9 +98,7 @@ func ShowAddSziWindow(myApp fyne.App, userID uint, db *gorm.DB) {
 		},
 	}
 
-	// Устанавливаем минимальный размер для полей ввода
 	nameEntry.Resize(fyne.NewSize(350, 30))
-	// typeSelector - это выпадающий список, ему не нужен метод Resize
 	certNumberEntry.Resize(fyne.NewSize(350, 30))
 	issueDateEntry.Resize(fyne.NewSize(350, 30))
 	expiryDateEntry.Resize(fyne.NewSize(350, 30))
@@ -110,7 +106,6 @@ func ShowAddSziWindow(myApp fyne.App, userID uint, db *gorm.DB) {
 	manufacturerEntry.Resize(fyne.NewSize(350, 30))
 	softwareEntry.Resize(fyne.NewSize(350, 30))
 
-	// Улучшенное оформление формы
 	scrollContainer := container.NewVScroll(form)
 	scrollContainer.SetMinSize(fyne.NewSize(580, 400))
 	buttonContainer := container.NewHBox(

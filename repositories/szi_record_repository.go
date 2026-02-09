@@ -34,17 +34,6 @@ func (r *SZIRecordRepository) FindByUserID(userID uint) ([]models.SZIRecord, err
 	return records, err
 }
 
-func (r *SZIRecordRepository) FindAccessibleByUserID(userID uint) ([]models.SZIRecord, error) {
-	var records []models.SZIRecord
-	
-	// Используем подзапрос для получения всех записей, доступных пользователю
-	subQuery := r.DB.Table("access_permissions").
-		Select("DISTINCT record_id").
-		Where("guest_user_id = ?", userID)
-	
-	err := r.DB.Where("user_id = ? OR id IN (?)", userID, subQuery).Order("name").Find(&records).Error
-	return records, err
-}
 
 func (r *SZIRecordRepository) Update(record *models.SZIRecord) error {
 	return r.DB.Save(record).Error
@@ -57,13 +46,8 @@ func (r *SZIRecordRepository) Delete(id uint) error {
 func (r *SZIRecordRepository) Search(userID uint, criteria map[string]interface{}) ([]models.SZIRecord, error) {
 	var records []models.SZIRecord
 
-	// Создаем подзапрос для получения ID записей, к которым у пользователя есть доступ
-	subQuery := r.DB.Table("access_permissions").
-		Select("DISTINCT record_id").
-		Where("guest_user_id = ?", userID)
-
 	// Основной запрос с фильтрацией
-	query := r.DB.Where("user_id = ? OR id IN (?)", userID, subQuery)
+	query := r.DB.Where("user_id = ?", userID)
 
 	// Применяем дополнительные критерии поиска
 	for field, value := range criteria {

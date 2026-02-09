@@ -65,16 +65,13 @@ func ShowRegisterWindow(myApp fyne.App, db *gorm.DB) {
 			return
 		}
 
-		// Закрываем окно регистрации
 		MyWindow.Close()
 	}
 
-	// Устанавливаем минимальный размер для полей ввода
 	usernameEntry.Resize(fyne.NewSize(400, 30))
 	passwordEntry.Resize(fyne.NewSize(400, 30))
 	confirmPasswordEntry.Resize(fyne.NewSize(400, 30))
 
-	// Кнопки
 	buttonContainer := container.NewHBox(
 		widget.NewButton("Назад", func() { MyWindow.Close() }),
 		widget.NewButton("Зарегистрироваться", func() { onSubmit() }),
@@ -95,7 +92,6 @@ func ShowRegisterWindow(myApp fyne.App, db *gorm.DB) {
 		errorLabel,
 	)
 
-	// Добавим фоновый цвет для улучшения визуального восприятия
 	background := canvas.NewRectangle(color.RGBA{R: 240, G: 240, B: 240, A: 255})
 	backgroundContainer := container.NewStack(background, container.NewCenter(mainContent))
 

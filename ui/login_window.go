@@ -21,21 +21,16 @@ func ShowLoginWindow(myApp fyne.App, db *gorm.DB) {
 	passwordEntry := widget.NewPasswordEntry()
 	passwordEntry.SetPlaceHolder("Введите пароль")
 
-	// Label для отображения ошибок
 	errorLabel := widget.NewLabel("")
 	errorLabel.Importance = widget.WarningImportance
 
-	// Define the login button later after all variables are declared
 	var loginButton *widget.Button
 
 	loginFunc := func() {
-		// Real authentication - check credentials against DB
 		user, err := services.AuthenticateUser(db, usernameEntry.Text, passwordEntry.Text)
 		if err != nil {
-			// Authentication failed
 			errorLabel.SetText(err.Error())
 		} else {
-			// Authentication successful - show dashboard with statistics
 			myWindow.Close()
 			ShowDashboardWindow(myApp, user.Username, db)
 		}
@@ -43,21 +38,18 @@ func ShowLoginWindow(myApp fyne.App, db *gorm.DB) {
 
 	loginButton = widget.NewButtonWithIcon("Войти", nil, loginFunc)
 
-	// Контейнер для кнопки и сообщения об ошибке
 	buttonWithErrorContainer := container.NewVBox(loginButton, errorLabel)
 
-	// Кнопка регистрации
+	//регистраци
 	registerButton := widget.NewButton("Регистрация", func() {
 		ShowRegisterWindow(myApp, db)
 	})
 
-	// Устанавливаем минимальный размер для полей ввода
 	usernameEntry.Resize(fyne.NewSize(400, 30))
 	passwordEntry.Resize(fyne.NewSize(400, 30))
 
-	// Центрируем содержимое
 	content := container.NewVBox(
-		widget.NewLabel("Добро пожаловать в Реестр СЗИ"), // Заголовок
+		widget.NewLabel("Добро пожаловать в Реестр СЗИ"), 
 		widget.NewSeparator(), // Разделитель
 		container.NewPadded(container.NewVBox(
 			widget.NewLabel("Имя пользователя"),
@@ -65,11 +57,10 @@ func ShowLoginWindow(myApp fyne.App, db *gorm.DB) {
 			widget.NewLabel("Пароль"),
 			passwordEntry,
 		)), // Форма с отступами
-		container.NewPadded(buttonWithErrorContainer), // Кнопка с отступами
-		container.NewPadded(registerButton),           // Кнопка регистрации
+		container.NewPadded(buttonWithErrorContainer), 
+		container.NewPadded(registerButton),          
 	)
 
-	// Добавим фоновый цвет для улучшения визуального восприятия
 	background := canvas.NewRectangle(color.RGBA{R: 240, G: 240, B: 240, A: 255})
 	backgroundContainer := container.NewStack(background, container.NewCenter(content))
 

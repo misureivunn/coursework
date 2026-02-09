@@ -10,7 +10,7 @@ import (
 	"szi-registry/services"
 )
 
-// ShowDashboardWindow отображает главное окно с панелью статистики
+//отображает главное окно с панелью статистики
 func ShowDashboardWindow(myApp fyne.App, username string, db *gorm.DB) {
 	myWindow := myApp.NewWindow("Реестр СЗИ от НСД — Главная")
 	myWindow.Resize(fyne.NewSize(1000, 700))
@@ -33,15 +33,12 @@ func ShowDashboardWindow(myApp fyne.App, username string, db *gorm.DB) {
 		return
 	}
 
-	// Создаем контейнер для статистики
 	statContainer := container.NewVBox()
 
-	// Добавляем общую информацию
 	totalLabel := widget.NewLabel(fmt.Sprintf("Всего СЗИ: %d", stats.TotalCount))
 	totalLabel.TextStyle.Bold = true
 	statContainer.Add(totalLabel)
 
-	// Добавляем информацию о сертификатах
 	certHeader := widget.NewLabel("Сертификаты:")
 	certHeader.TextStyle.Bold = true
 	statContainer.Add(certHeader)
@@ -65,28 +62,25 @@ func ShowDashboardWindow(myApp fyne.App, username string, db *gorm.DB) {
 		}
 	}
 
-	// Кнопка перехода к реестру СЗИ
+	//переход к реестру СЗИ
 	gotoRegistryBtn := widget.NewButton("Перейти к реестру СЗИ", func() {
 		ShowSZIRegistryWindow(myApp, username, db)
 		myWindow.Close()
 	})
 
-	// Кнопка выхода
 	logoutBtn := widget.NewButton("Выход", func() {
 		myWindow.Close()
 		ShowLoginWindow(myApp, db)
 	})
 
-	// Контейнер для кнопок
 	buttonsContainer := container.NewHBox(gotoRegistryBtn, logoutBtn)
 
-	// Основной контейнер
 	mainContainer := container.NewBorder(
-		nil, // верх
-		buttonsContainer, // низ
-		nil, // лево
-		nil, // право
-		container.NewPadded(statContainer), // центр
+		nil,
+		buttonsContainer, 
+		nil, 
+		nil, 
+		container.NewPadded(statContainer),
 	)
 
 	myWindow.SetContent(mainContainer)

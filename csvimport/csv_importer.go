@@ -204,7 +204,7 @@ func ImportFromCSV(filename string, userID uint) ([]models.SZIRecord, error) {
 	return importedRecords, nil
 }
 
-// parseDateTime пытается распознать дату в различных форматах
+// пытается распознать дату в различных форматах
 func parseDateTime(dateStr string) (time.Time, error) {
 	dateStr = strings.TrimSpace(dateStr)
 	if dateStr == "" {
@@ -213,19 +213,19 @@ func parseDateTime(dateStr string) (time.Time, error) {
 
 	// Основные форматы дат, которые могут использоваться
 	formats := []string{
-		"2006-01-02 15:04:05", // RFC3339
+		"2006-01-02 15:04:05",
 		"2006-01-02T15:04:05Z07:00",
 		"2006-01-02T15:04:05",
-		"02.01.2006 15:04:05", // DD.MM.YYYY HH:MM:SS
-		"02/01/2006 15:04:05", // DD/MM/YYYY HH:MM:SS
-		"2006-01-02",          // Только дата
-		"02.01.2006",          // DD.MM.YYYY
-		"02/01/2006",          // DD/MM/YYYY
-		"02-Jan-2006",         // DD-Mon-YYYY
-		"02-Jan-2006 15:04:05", // DD-Mon-YYYY HH:MM:SS
-		"Jan 02, 2006",        // Mon DD, YYYY
-		"Jan 02, 2006 15:04:05", // Mon DD, YYYY HH:MM:SS
-		"1",                   // Если просто число, считаем это годом
+		"02.01.2006 15:04:05", 
+		"02/01/2006 15:04:05", 
+		"2006-01-02",          
+		"02.01.2006",          
+		"02/01/2006",          
+		"02-Jan-2006",         
+		"02-Jan-2006 15:04:05", 
+		"Jan 02, 2006",       
+		"Jan 02, 2006 15:04:05", 
+		"1",             
 	}
 
 	for _, format := range formats {

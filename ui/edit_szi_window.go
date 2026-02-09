@@ -84,8 +84,6 @@ func ShowEditSziWindow(myApp fyne.App, record models.SZIRecord, db *gorm.DB) {
 			record.Status = statusEntry.Text
 			record.Manufacturer = manufacturerEntry.Text
 			record.SoftwareVersion = softwareVersionEntry.Text
-
-			// Обновляем новые поля для классификации СЗИ от НСД
 			record.Purpose = purposeSelector.Selected
 			record.DeploymentType = deploymentTypeSelector.Selected
 			record.ClassProtection = classProtectionSelector.Selected
@@ -104,9 +102,7 @@ func ShowEditSziWindow(myApp fyne.App, record models.SZIRecord, db *gorm.DB) {
 		},
 	}
 
-	// Устанавливаем минимальный размер для полей ввода
 	nameEntry.Resize(fyne.NewSize(350, 30))
-	// typeSelector - это выпадающий список, ему не нужен метод Resize
 	certNumberEntry.Resize(fyne.NewSize(350, 30))
 	issueDateEntry.Resize(fyne.NewSize(350, 30))
 	expiryDateEntry.Resize(fyne.NewSize(350, 30))
@@ -114,8 +110,6 @@ func ShowEditSziWindow(myApp fyne.App, record models.SZIRecord, db *gorm.DB) {
 	statusEntry.Resize(fyne.NewSize(350, 30))
 	manufacturerEntry.Resize(fyne.NewSize(350, 30))
 	softwareVersionEntry.Resize(fyne.NewSize(350, 30))
-
-	// Улучшенное оформление формы
 	scrollContainer := container.NewVScroll(form)
 	scrollContainer.SetMinSize(fyne.NewSize(580, 400))
 	buttonContainer := container.NewHBox(

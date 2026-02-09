@@ -18,7 +18,7 @@ import (
 // отображает окно с реестром СЗИ
 func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 	myWindow := myApp.NewWindow("Реестр СЗИ от НСД — Реестр")
-	myWindow.Resize(fyne.NewSize(1400, 800))
+	myWindow.Resize(fyne.NewSize(1400, 600))
 
 	// Получаем ID пользователя по имени
 	user, err := services.GetUserByUsername(db, username)
@@ -367,7 +367,6 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 		}
 	})
 
-	// Обновляем информацию о странице
 	updatePageInfo()
 
 	// Контейнер для навигации по страницам
@@ -378,26 +377,22 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 	)
 
 
-	// Кнопка импорта из CSV
 	importBtn := widget.NewButton("Импорт из CSV", func() {
-		// Диалог выбора файла
 		dialog.ShowFileOpen(func(uri fyne.URIReadCloser, err error) {
 			if err != nil {
 				ui.ShowErrorDialog("Ошибка при открытии файла: "+err.Error(), myWindow.Canvas())
 				return
 			}
 			if uri == nil {
-				// Пользователь отменил операцию
 				return
 			}
 
 			// Получаем путь к файлу
-			filePath := uri.URI().String()[7:] // Убираем префикс "file://"
+			filePath := uri.URI().String()[7:]
 
 			// Вызываем сервис импорта
 			importedRecords, err := csvimport.ImportFromCSV(filePath, uint(user.ID))
 			if err != nil {
-				// Показываем ошибку
 				errorDialog := widget.NewModalPopUp(
 					widget.NewLabel("Ошибка при импорте из CSV: "+err.Error()),
 					myWindow.Canvas(),
@@ -409,7 +404,6 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 			// Сохраняем импортированные записи в базу данных
 			var savedCount int
 			for _, record := range importedRecords {
-				// Проверяем, существует ли запись с таким же уникальным набором данных (имя, номер сертификата, пользователь)
 				var existingRecord models.SZIRecord
 				result := db.Where("name = ? AND cert_number = ? AND user_id = ?", record.Name, record.CertNumber, record.UserID).First(&existingRecord)
 
@@ -445,7 +439,6 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 					}
 					savedCount++
 				} else if result.Error == nil {
-					// Запись с такими параметрами существует, обновляем её
 					existingRecord.Name = record.Name
 					existingRecord.Type = record.Type
 					existingRecord.CertNumber = record.CertNumber
@@ -554,7 +547,7 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 
 	// Создаем контейнер с фиксированной высотой для области с таблицей
 	tableArea := container.NewVBox(scrollContainer)
-	tableArea.Objects[0].(*container.Scroll).SetMinSize(fyne.NewSize(1400, 600))
+	tableArea.Objects[0].(*container.Scroll).SetMinSize(fyne.NewSize(1400, 400))
 
 	// Создаем контейнер с заголовками и таблицей, чтобы они прокручивались вместе
 	tableWithHeaders := container.NewVBox(
@@ -563,7 +556,7 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 	)
 
 	// Увеличиваем размер окна для отображения большего количества строк
-	myWindow.Resize(fyne.NewSize(1400, 1000))
+	myWindow.Resize(fyne.NewSize(1400, 800))
 
 	// Создаем контейнер с правильным расположением элементов
 	content := container.NewBorder(
