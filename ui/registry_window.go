@@ -54,7 +54,7 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 	pageInfoLabel := widget.NewLabel("")
 
 	// Оптимизированные ширины для экрана 1440x900 (сумма ~1175px)
-	initialColumnWidths := []float32{170, 85, 110, 95, 95, 85, 110, 85, 90, 95, 80, 75}
+	initialColumnWidths := []float32{250, 120, 140, 120, 120, 100, 150, 120, 120, 150, 150, 100}
 	for i, width := range initialColumnWidths {
 		table.SetColumnWidth(i, width)
 	}
