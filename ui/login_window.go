@@ -3,12 +3,13 @@ package ui
 import (
 	"image/color"
 
+	"szi-registry/services"
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
 	"gorm.io/gorm"
-	"szi-registry/services"
 )
 
 func ShowLoginWindow(myApp fyne.App, db *gorm.DB) {
@@ -49,7 +50,7 @@ func ShowLoginWindow(myApp fyne.App, db *gorm.DB) {
 	passwordEntry.Resize(fyne.NewSize(400, 30))
 
 	content := container.NewVBox(
-		widget.NewLabel("Добро пожаловать в Реестр СЗИ"), 
+		widget.NewLabel("Добро пожаловать в Реестр СЗИ"),
 		widget.NewSeparator(), // Разделитель
 		container.NewPadded(container.NewVBox(
 			widget.NewLabel("Имя пользователя"),
@@ -57,8 +58,10 @@ func ShowLoginWindow(myApp fyne.App, db *gorm.DB) {
 			widget.NewLabel("Пароль"),
 			passwordEntry,
 		)), // Форма с отступами
-		container.NewPadded(buttonWithErrorContainer), 
-		container.NewPadded(registerButton),          
+		container.NewPadded(container.NewVBox(
+			buttonWithErrorContainer,
+			registerButton,
+		)),
 	)
 
 	background := canvas.NewRectangle(color.RGBA{R: 240, G: 240, B: 240, A: 255})

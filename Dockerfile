@@ -4,15 +4,15 @@
 FROM golang:1.22-alpine AS builder
 
 # Установка зависимостей для компиляции Fyne
-RUN apk add --no-cache \ 
-    gcc \ 
-    musl-dev \ 
-    mesa-dev \ 
-    libx11-dev \ 
-    libxcursor-dev \ 
-    libxrandr-dev \ 
-    libxinerama-dev \ 
-    libxi-dev \ 
+RUN apk add --no-cache \
+    gcc \
+    musl-dev \
+    mesa-dev \
+    libx11-dev \
+    libxcursor-dev \
+    libxrandr-dev \
+    libxinerama-dev \
+    libxi-dev \
     libgl1-mesa-dev
 
 WORKDIR /app
@@ -31,14 +31,14 @@ RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -o szi-registry .
 FROM alpine:latest
 
 # Установка runtime зависимостей для GUI
-RUN apk add --no-cache \ 
-    ca-certificates \ 
-    libx11 \ 
-    libxcursor \ 
-    libxrandr \ 
-    libxinerama \ 
-    libxi \ 
-    mesa-gl \ 
+RUN apk add --no-cache \
+    ca-certificates \
+    libx11 \
+    libxcursor \
+    libxrandr \
+    libxinerama \
+    libxi \
+    mesa-gl \
     font-noto
 
 WORKDIR /app
@@ -54,10 +54,10 @@ RUN addgroup -g 1000 szi && \
 USER szi
 
 # Переменные окружения для подключения к БД
-ENV DB_HOST=postgres-szi \ 
-    DB_PORT=5432 \ 
-    DB_USER=szi_user \ 
-    DB_PASSWORD=MyV3ryS3cur3P@ss2026! \ 
+ENV DB_HOST=postgres-szi \
+    DB_PORT=5432 \
+    DB_USER=szi_user \
+    DB_PASSWORD=MyV3ryS3cur3P@ss2026! \
     DB_NAME=szi_registry
 
 # Для GUI-приложений нужен DISPLAY (при запуске с X11 forwarding)

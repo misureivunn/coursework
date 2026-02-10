@@ -2,17 +2,18 @@ package ui
 
 import (
 	"fmt"
-	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/dialog"
-	"fyne.io/fyne/v2/widget"
-	"gorm.io/gorm"
 	"szi-registry/csvimport"
 	"szi-registry/export"
 	"szi-registry/models"
 	"szi-registry/services"
 	"szi-registry/utils/ui"
 	"time"
+
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/widget"
+	"gorm.io/gorm"
 )
 
 // отображает окно с реестром СЗИ
@@ -38,30 +39,30 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 		records = []models.SZIRecord{}
 	}
 
-	// Создаем таблицу
-	var table *widget.Table
-	table = widget.NewTable(
+	// Создаем таблицу данных (единственная таблица с данными)
+	dataTable := widget.NewTable(
 		func() (int, int) {
 			return 0, 12
 		},
-	func() fyne.CanvasObject {
-		label := widget.NewLabel("")
-		label.Wrapping = fyne.TextWrapBreak  
-		label.Truncation = fyne.TextTruncateOff
-		return label
-	},
-		func(id widget.TableCellID, cell fyne.CanvasObject) {
-		})
+		func() fyne.CanvasObject {
+			label := widget.NewLabel("")
+			label.Wrapping = fyne.TextWrapBreak
+			label.Truncation = fyne.TextTruncateOff
+			return label
+		},
+		func(id widget.TableCellID, cell fyne.CanvasObject) {},
+	)
 
 	pageInfoLabel := widget.NewLabel("")
 	// Устанавливаем высоту строки для отображения переносов текста
-	table.SetRowHeight(0, float32(100.0))
+	rowHeight := float32(80)
+	headerRowHeight := float32(60) // Увеличиваем еще больше для полного отображения текста
 
-	// Оптимизированные ширины для экрана 1440x900 (сумма ~1175px)
-	initialColumnWidths := []float32{250, 120, 140, 120, 120, 100, 150, 120, 120, 150, 150, 100}
+	initialColumnWidths := []float32{250, 120, 140, 120, 120, 120, 150, 120, 130, 150, 150, 100}
 	for i, width := range initialColumnWidths {
-		table.SetColumnWidth(i, width)
+		dataTable.SetColumnWidth(i, width)
 	}
+	dataTable.SetRowHeight(0, rowHeight)
 
 	// для обновления информации о странице
 	updatePageInfo := func() {
@@ -74,7 +75,7 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 		}
 	}
 
-	// обновления данных в таблице с учетом страниц
+	// обновления данных в таблице с учетом страниц (единый блок)
 	updateTableData := func(data []models.SZIRecord) {
 		// Обновляем все записи
 		allRecords = data
@@ -98,11 +99,16 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 		// Ограничиваем данные для текущей страницы
 		pageRecords := data[startIndex:endIndex]
 
-		// Обновляем таблицу
-		table.Length = func() (int, int) {
-			return len(pageRecords), 12 // строки: записи из БД, 12 столбцов
+		// Устанавливаем высоту строк для текущей страницы
+		for r := 0; r < len(pageRecords); r++ {
+			dataTable.SetRowHeight(r, rowHeight)
 		}
-		table.UpdateCell = func(id widget.TableCellID, cell fyne.CanvasObject) {
+
+		// Обновляем таблицу
+		dataTable.Length = func() (int, int) {
+			return len(pageRecords), 12
+		}
+		dataTable.UpdateCell = func(id widget.TableCellID, cell fyne.CanvasObject) {
 			label := cell.(*widget.Label)
 
 			if id.Row < len(pageRecords) {
@@ -144,14 +150,14 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 				label.SetText("")
 			}
 		}
-		table.Refresh()
+		dataTable.Refresh()
 
 		// Обновляем информацию о странице
 		updatePageInfo()
 	}
 
 	// Обработка нажатий на таблицу
-	table.OnSelected = func(id widget.TableCellID) {
+	dataTable.OnSelected = func(id widget.TableCellID) {
 		if id.Col == 11 { // Столбец действий
 			// Вычисляем индекс записи с учетом пагинации
 			startIndex := currentPage * pageSize
@@ -201,13 +207,19 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 					}, myWindow.Canvas())
 
 				// Вычисляем позицию ячейки на экране
-				cellPos := fyne.NewPos(
-					float32(id.Col) * initialColumnWidths[id.Col],  // X координата
-					float32(id.Row+1) * 70,  // Y координата (высота строки 70px)
+				tableAbs := myApp.Driver().AbsolutePositionForObject(dataTable)
+				colX := float32(0)
+				for i := 0; i < id.Col && i < len(initialColumnWidths); i++ {
+					colX += initialColumnWidths[i]
+				}
+				cellY := rowHeight * float32(id.Row)
+				menuPos := fyne.NewPos(
+					tableAbs.X+colX,
+					tableAbs.Y+cellY+rowHeight,
 				)
-				
-				// Показываем меню в позиции ячейки
-				actionMenu.ShowAtPosition(cellPos)
+
+				// Показываем меню под нажатой ячейкой
+				actionMenu.ShowAtPosition(menuPos)
 			}
 		}
 	}
@@ -244,7 +256,7 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 		headerTable.UnselectAll()
 	}
 	// Устанавливаем высоту строки заголовков
-	headerTable.SetRowHeight(0, float32(70.0))
+	headerTable.SetRowHeight(0, headerRowHeight)
 
 	// Создаем поля для фильтрации
 	nameFilter := widget.NewEntry()
@@ -342,14 +354,6 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 	// Кнопки управления
 	addBtn := widget.NewButton("Добавить СЗИ", func() {
 		ShowAddSziWindow(myApp, uint(user.ID), db)
-	})
-
-	editBtn := widget.NewButton("Редактировать", func() {
-		ui.ShowErrorDialog("Пожалуйста, выберите запись для редактирования, нажав на столбец 'Действия' в нужной строке", myWindow.Canvas())
-	})
-
-	deleteBtn := widget.NewButton("Удалить", func() {
-		ui.ShowErrorDialog("Пожалуйста, выберите запись для удаления, нажав на столбец 'Действия' в нужной строке", myWindow.Canvas())
 	})
 
 	// Кнопки навигации по страницам
@@ -520,26 +524,95 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 		exportSuccessDialog.Show()
 	})
 
-
 	// Контейнер для кнопок управления
-	controlButtonsContainer := container.NewHBox(addBtn, editBtn, deleteBtn, importBtn, exportBtn)
+	controlButtonsContainer := container.NewHBox(addBtn, importBtn, exportBtn)
 
 	// Устанавливаем высоту строк ДО создания контейнеров
-	table.SetRowHeight(0, float32(80))
-	headerTable.SetRowHeight(0, float32(80))
+	// (уже установлено выше)
 
-	// Обернем таблицу в прокручиваемый контейнер
-	tableScroll := container.NewVScroll(table)
-	tableScroll.SetMinSize(fyne.NewSize(1320, 450))
+	// Обработка нажатий на таблицу данных
+	dataTable.OnSelected = func(id widget.TableCellID) {
+		if id.Col == 11 {
+			startIndex := currentPage * pageSize
+			recordIndex := startIndex + id.Row
 
-	// Заголовки БЕЗ прокрутки - просто контейнер с фиксированной высотой
+			if recordIndex >= 0 && recordIndex < len(allRecords) {
+				selectedRecord := allRecords[recordIndex]
+
+				actionMenu := widget.NewPopUpMenu(
+					&fyne.Menu{
+						Label: "Действия",
+						Items: []*fyne.MenuItem{
+							{Label: "Редактировать", Action: func() {
+								ShowEditSziWindow(myApp, selectedRecord, db)
+							}},
+							{Label: "Удалить", Action: func() {
+								var deleteDialog *widget.PopUp
+
+								deleteDialog = widget.NewModalPopUp(
+									container.NewVBox(
+										widget.NewLabel("Вы уверены, что хотите удалить запись '"+selectedRecord.Name+"'?"),
+										container.NewHBox(
+											widget.NewButton("Да", func() {
+												err := services.DeleteSziRecord(db, uint(user.ID), selectedRecord.ID)
+												if err != nil {
+													ui.ShowErrorDialog("Ошибка при удалении записи: "+err.Error(), myWindow.Canvas())
+												} else {
+													ShowSZIRegistryWindow(myApp, username, db)
+													myWindow.Close()
+												}
+												deleteDialog.Hide()
+											}),
+											widget.NewButton("Нет", func() {
+												deleteDialog.Hide()
+											}),
+										),
+									),
+									myWindow.Canvas(),
+								)
+								deleteDialog.Show()
+							}},
+						},
+					}, myWindow.Canvas())
+
+				tableAbs := myApp.Driver().AbsolutePositionForObject(dataTable)
+				colX := float32(0)
+				for i := 0; i < id.Col && i < len(initialColumnWidths); i++ {
+					colX += initialColumnWidths[i]
+				}
+				cellY := rowHeight * float32(id.Row)
+				menuPos := fyne.NewPos(
+					tableAbs.X+colX,
+					tableAbs.Y+cellY+rowHeight,
+				)
+
+				actionMenu.ShowAtPosition(menuPos)
+			}
+		}
+	}
+
+	// Обернем только таблицу данных в прокручиваемый контейнер
+	tableScroll := container.NewScroll(dataTable)
+	tableScroll.SetMinSize(fyne.NewSize(1320, 350))
+
+	// Заголовки в простом контейнере без вертикальной прокрутки
 	headerContainer := container.NewMax(headerTable)
 
-	// Объединяем заголовки и таблицу
+	// Оборачиваем весь блок заголовков и таблицы в горизонтальный скролл
+	headerScroll := container.NewHScroll(headerContainer)
+	headerScroll.SetMinSize(fyne.NewSize(1320, headerRowHeight+10))
+
+	// Синхронизируем горизонтальную прокрутку
+	tableScroll.OnScrolled = func(pos fyne.Position) {
+		headerScroll.Offset = fyne.NewPos(pos.X, 0)
+		headerScroll.Refresh()
+	}
+
+	// Объединяем заголовки и прокручиваемую таблицу данных
 	tableWithHeaders := container.NewBorder(
-		headerContainer, // Заголовки сверху (БЕЗ скролла)
+		headerScroll, // Фиксированные заголовки сверху с синхронизированным скроллом
 		nil, nil, nil,
-		tableScroll,     // Таблица в центре (СО скроллом)
+		tableScroll, // Прокручиваемая таблица данных
 	)
 
 	// Создаем контейнер с правильным расположением элементов
