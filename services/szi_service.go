@@ -1,6 +1,7 @@
 package services
 
 import (
+	"fmt"
 	"gorm.io/gorm"
 	"szi-registry/models"
 	"szi-registry/repositories"
@@ -13,12 +14,30 @@ func GetSziRecordsByUserID(db *gorm.DB, userID uint) ([]models.SZIRecord, error)
 
 func AddSziRecord(db *gorm.DB, record *models.SZIRecord) error {
 	repo := repositories.NewSZIRecordRepository(db)
-	return repo.Create(record)
+	err := repo.Create(record)
+
+	if err == nil {
+		// Логируем создание
+		LogAction(db, record.UserID, record.ID, "CREATE", "SZIRecord", nil, record, fmt.Sprintf("Создана запись СЗИ: %s", record.Name))
+	}
+
+	return err
 }
 
 func UpdateSziRecord(db *gorm.DB, record *models.SZIRecord) error {
 	repo := repositories.NewSZIRecordRepository(db)
-	return repo.Update(record)
+
+	// Получаем старое значение
+	oldRecord, _ := repo.FindByID(record.ID)
+
+	err := repo.Update(record)
+
+	if err == nil {
+		// Логируем изменение
+		LogAction(db, record.UserID, record.ID, "UPDATE", "SZIRecord", oldRecord, record, fmt.Sprintf("Обновлена запись СЗИ: %s", record.Name))
+	}
+
+	return err
 }
 
 func GetSziRecordByID(db *gorm.DB, id uint) (*models.SZIRecord, error) {
@@ -54,14 +73,24 @@ func GetUserRecords(db *gorm.DB, userID uint) ([]models.SZIRecord, error) {
 func DeleteSziRecord(db *gorm.DB, userID, recordID uint) error {
 	repo := repositories.NewSZIRecordRepository(db)
 
+	// Получаем запись перед удалением
+	record, _ := repo.FindByID(recordID)
+
 	// Проверяем, принадлежит ли запись пользователю
-	var record models.SZIRecord
-	err := db.Where("id = ? AND user_id = ?", recordID, userID).First(&record).Error
+	var existingRecord models.SZIRecord
+	err := db.Where("id = ? AND user_id = ?", recordID, userID).First(&existingRecord).Error
 	if err != nil {
 		return err
 	}
 
-	return repo.Delete(recordID)
+	err = repo.Delete(recordID)
+
+	if err == nil && record != nil {
+		// Логируем удаление
+		LogAction(db, userID, recordID, "DELETE", "SZIRecord", record, nil, fmt.Sprintf("Удалена запись СЗИ: %s", record.Name))
+	}
+
+	return err
 }
 
 // возвращает всех пользователей
@@ -69,4 +98,3 @@ func GetAllUsers(db *gorm.DB) ([]models.User, error) {
 	repo := repositories.NewUserRepository(db)
 	return repo.GetAll()
 }
-
