@@ -34,6 +34,7 @@ func (r *SZIRecordRepository) FindByUserID(userID uint) ([]models.SZIRecord, err
 	return records, err
 }
 
+
 func (r *SZIRecordRepository) Update(record *models.SZIRecord) error {
 	return r.DB.Save(record).Error
 }

@@ -10,7 +10,7 @@ import (
 	"szi-registry/services"
 )
 
-// отображает главное окно с панелью статистики
+//отображает главное окно с панелью статистики
 func ShowDashboardWindow(myApp fyne.App, username string, db *gorm.DB) {
 	myWindow := myApp.NewWindow("Реестр СЗИ от НСД — Главная")
 	myWindow.Resize(fyne.NewSize(1000, 700))
@@ -68,35 +68,18 @@ func ShowDashboardWindow(myApp fyne.App, username string, db *gorm.DB) {
 		myWindow.Close()
 	})
 
-	// Получаем количество непрочитанных уведомлений
-	unreadCount, _ := services.GetUnreadNotificationCount(db, uint(user.ID))
-
-	var notificationBtn *widget.Button
-	if unreadCount > 0 {
-		notificationBtn = widget.NewButton(fmt.Sprintf("🔔 Уведомления (%d)", unreadCount), func() {
-			ShowNotificationsWindow(myApp, username, db)
-			myWindow.Close()
-		})
-		notificationBtn.Importance = widget.HighImportance
-	} else {
-		notificationBtn = widget.NewButton("🔔 Уведомления", func() {
-			ShowNotificationsWindow(myApp, username, db)
-			myWindow.Close()
-		})
-	}
-
 	logoutBtn := widget.NewButton("Выход", func() {
 		myWindow.Close()
 		ShowLoginWindow(myApp, db)
 	})
 
-	buttonsContainer := container.NewHBox(gotoRegistryBtn, notificationBtn, logoutBtn)
+	buttonsContainer := container.NewHBox(gotoRegistryBtn, logoutBtn)
 
 	mainContainer := container.NewBorder(
 		nil,
-		buttonsContainer,
-		nil,
-		nil,
+		buttonsContainer, 
+		nil, 
+		nil, 
 		container.NewPadded(statContainer),
 	)
 

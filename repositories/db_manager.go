@@ -38,8 +38,6 @@ func NewDBManagerWithConfig(cfg *config.Config) (*DBManager, error) {
 		&models.User{},
 		&models.SZIRecord{},
 		&models.UserRole{},
-		&models.AuditLog{},
-		&models.Notification{},
 	)
 	if err != nil {
 		return nil, err

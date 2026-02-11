@@ -64,15 +64,15 @@ func ShowAddSziWindow(myApp fyne.App, userID uint, db *gorm.DB) {
 			}
 
 			newRecord := &models.SZIRecord{
-				Name:            nameEntry.Text,
-				Type:            typeSelector.Selected, // Используем выбранный тип из выпадающего списка
-				CertNumber:      certNumberEntry.Text,
-				CertIssueDate:   issueDate,
-				CertExpiryDate:  expiryDate,
-				Location:        locationEntry.Text,
-				UserID:          userID,
-				Manufacturer:    manufacturerEntry.Text,
-				SoftwareVersion: softwareEntry.Text,
+				Name:              nameEntry.Text,
+				Type:              typeSelector.Selected, // Используем выбранный тип из выпадающего списка
+				CertNumber:        certNumberEntry.Text,
+				CertIssueDate:     issueDate,
+				CertExpiryDate:    expiryDate,
+				Location:          locationEntry.Text,
+				UserID:            userID,
+				Manufacturer:      manufacturerEntry.Text,
+				SoftwareVersion:   softwareEntry.Text,
 				Purpose:         purposeSelector.Selected,
 				DeploymentType:  deploymentTypeSelector.Selected,
 				ClassProtection: classProtectionSelector.Selected,
