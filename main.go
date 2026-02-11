@@ -36,7 +36,7 @@ func main() {
 	go func() {
 		ticker := time.NewTicker(24 * time.Hour)
 		defer ticker.Stop()
-		
+
 		for range ticker.C {
 			fmt.Println("Периодическая генерация уведомлений...")
 			if err := services.GenerateExpiryNotifications(dbManager.DB); err != nil {

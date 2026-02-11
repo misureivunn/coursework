@@ -10,7 +10,7 @@ import (
 	"szi-registry/services"
 )
 
-//отображает главное окно с панелью статистики
+// отображает главное окно с панелью статистики
 func ShowDashboardWindow(myApp fyne.App, username string, db *gorm.DB) {
 	myWindow := myApp.NewWindow("Реестр СЗИ от НСД — Главная")
 	myWindow.Resize(fyne.NewSize(1000, 700))
@@ -94,9 +94,9 @@ func ShowDashboardWindow(myApp fyne.App, username string, db *gorm.DB) {
 
 	mainContainer := container.NewBorder(
 		nil,
-		buttonsContainer, 
-		nil, 
-		nil, 
+		buttonsContainer,
+		nil,
+		nil,
 		container.NewPadded(statContainer),
 	)
 

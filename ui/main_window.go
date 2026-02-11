@@ -2,13 +2,13 @@ package ui
 
 import (
 	"fmt"
-	"strings"
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/widget"
 	"gorm.io/gorm"
+	"strings"
 	"szi-registry/export"
 	"szi-registry/models"
 	"szi-registry/services"
@@ -421,11 +421,11 @@ func ShowMainWindow(myApp fyne.App, username string, db *gorm.DB) {
 	)
 
 	content := container.NewBorder(
-		filterContainer,                                     // верхняя часть - фильтры
-		bottomPanel,                                         // нижняя часть - дополнительные кнопки
-		nil,                                                 // левая часть - нет
-		nil,                                                 // правая часть - нет
-		tableWithHeaders,                                    // центральная часть - заголовки и таблица
+		filterContainer,  // верхняя часть - фильтры
+		bottomPanel,      // нижняя часть - дополнительные кнопки
+		nil,              // левая часть - нет
+		nil,              // правая часть - нет
+		tableWithHeaders, // центральная часть - заголовки и таблица
 	)
 	// Объединяем основной контент с верхней панелью инструментов
 	finalContent := container.NewBorder(topToolbar, nil, nil, nil, content)

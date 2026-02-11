@@ -15,24 +15,24 @@ func GenerateExpiryNotifications(db *gorm.DB) error {
 	if err := db.Find(&records).Error; err != nil {
 		return err
 	}
-	
+
 	repo := repositories.NewNotificationRepository(db)
 	now := time.Now()
-	
+
 	for _, record := range records {
 		daysUntilExpiry := int(record.CertExpiryDate.Sub(now).Hours() / 24)
-		
+
 		// Проверяем, есть ли уже уведомление для этой записи
 		var existingNotification models.Notification
 		result := db.Where("record_id = ? AND is_read = ?", record.ID, false).First(&existingNotification)
-		
+
 		if result.Error == nil {
 			// Уведомление уже существует
 			continue
 		}
-		
+
 		var notification *models.Notification
-		
+
 		if daysUntilExpiry < 0 {
 			// Сертификат просрочен
 			notification = &models.Notification{
@@ -67,14 +67,14 @@ func GenerateExpiryNotifications(db *gorm.DB) error {
 				IsRead:   false,
 			}
 		}
-		
+
 		if notification != nil {
 			if err := repo.Create(notification); err != nil {
 				return err
 			}
 		}
 	}
-	
+
 	return nil
 }
 

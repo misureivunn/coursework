@@ -11,10 +11,10 @@ import (
 // LogAction записывает действие пользователя в журнал аудита
 func LogAction(db *gorm.DB, userID, recordID uint, action, entityType string, oldValue, newValue interface{}, description string) error {
 	repo := repositories.NewAuditLogRepository(db)
-	
+
 	oldJSON, _ := json.Marshal(oldValue)
 	newJSON, _ := json.Marshal(newValue)
-	
+
 	log := &models.AuditLog{
 		UserID:      userID,
 		RecordID:    recordID,
@@ -25,7 +25,7 @@ func LogAction(db *gorm.DB, userID, recordID uint, action, entityType string, ol
 		Description: description,
 		CreatedAt:   time.Now(),
 	}
-	
+
 	return repo.Create(log)
 }
 

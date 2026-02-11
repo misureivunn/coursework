@@ -54,11 +54,11 @@ type AuditLog struct {
 	ID          uint      `json:"id" gorm:"primaryKey"`
 	UserID      uint      `json:"user_id" gorm:"not null;index"`
 	User        *User     `json:"user,omitempty" gorm:"foreignKey:UserID;constraint:OnDelete:SET NULL"`
-	RecordID    uint      `json:"record_id" gorm:"index"`                         // ID записи СЗИ (может быть NULL если запись удалена)
-	Action      string    `json:"action" gorm:"size:50;not null"`                 // CREATE, UPDATE, DELETE
-	EntityType  string    `json:"entity_type" gorm:"size:50;not null"`            // SZIRecord, User
-	OldValue    string    `json:"old_value,omitempty" gorm:"type:text"`           // JSON со старыми значениями
-	NewValue    string    `json:"new_value,omitempty" gorm:"type:text"`           // JSON с новыми значениями
+	RecordID    uint      `json:"record_id" gorm:"index"`               // ID записи СЗИ (может быть NULL если запись удалена)
+	Action      string    `json:"action" gorm:"size:50;not null"`       // CREATE, UPDATE, DELETE
+	EntityType  string    `json:"entity_type" gorm:"size:50;not null"`  // SZIRecord, User
+	OldValue    string    `json:"old_value,omitempty" gorm:"type:text"` // JSON со старыми значениями
+	NewValue    string    `json:"new_value,omitempty" gorm:"type:text"` // JSON с новыми значениями
 	Description string    `json:"description,omitempty" gorm:"type:text"`
 	IPAddress   string    `json:"ip_address,omitempty" gorm:"size:45"`
 	CreatedAt   time.Time `json:"created_at" gorm:"index"`
@@ -71,7 +71,7 @@ type Notification struct {
 	User      *User      `json:"user,omitempty" gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE"`
 	RecordID  uint       `json:"record_id" gorm:"index"` // ID записи СЗИ
 	Record    *SZIRecord `json:"record,omitempty" gorm:"foreignKey:RecordID;constraint:OnDelete:CASCADE"`
-	Type      string     `json:"type" gorm:"size:50;not null"`      // EXPIRING_SOON, EXPIRED, CRITICAL
+	Type      string     `json:"type" gorm:"size:50;not null"` // EXPIRING_SOON, EXPIRED, CRITICAL
 	Title     string     `json:"title" gorm:"size:255;not null"`
 	Message   string     `json:"message" gorm:"type:text;not null"`
 	IsRead    bool       `json:"is_read" gorm:"default:false;index"`

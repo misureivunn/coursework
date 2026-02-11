@@ -20,11 +20,11 @@ func (r *NotificationRepository) Create(notification *models.Notification) error
 func (r *NotificationRepository) FindByUserID(userID uint, unreadOnly bool) ([]models.Notification, error) {
 	var notifications []models.Notification
 	query := r.DB.Where("user_id = ?", userID)
-	
+
 	if unreadOnly {
 		query = query.Where("is_read = ?", false)
 	}
-	
+
 	err := query.Order("priority DESC, created_at DESC").
 		Preload("Record").
 		Find(&notifications).Error
