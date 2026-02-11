@@ -26,6 +26,9 @@ type SZIRecord struct {
 	Purpose         string `json:"purpose,omitempty" gorm:"column:purpose;size:50;index:idx_szi_purpose"`
 	DeploymentType  string `json:"deployment_type,omitempty" gorm:"column:deployment_type;size:50;index:idx_szi_deploy"`
 	ClassProtection string `json:"class_protection,omitempty" gorm:"column:class_protection;size:10;index:idx_szi_class"`
+
+	// Связь с пользователем
+	User *User `json:"user,omitempty" gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE"`
 }
 
 type UserRole struct {
@@ -44,4 +47,34 @@ type User struct {
 	CreatedAt time.Time       `json:"created_at"`
 	UpdatedAt time.Time       `json:"updated_at"`
 	DeletedAt *gorm.DeletedAt `json:"deleted_at" gorm:"index"`
+}
+
+// AuditLog — история изменений для аудита
+type AuditLog struct {
+	ID          uint      `json:"id" gorm:"primaryKey"`
+	UserID      uint      `json:"user_id" gorm:"not null;index"`
+	User        *User     `json:"user,omitempty" gorm:"foreignKey:UserID;constraint:OnDelete:SET NULL"`
+	RecordID    uint      `json:"record_id" gorm:"index"`                         // ID записи СЗИ (может быть NULL если запись удалена)
+	Action      string    `json:"action" gorm:"size:50;not null"`                 // CREATE, UPDATE, DELETE
+	EntityType  string    `json:"entity_type" gorm:"size:50;not null"`            // SZIRecord, User
+	OldValue    string    `json:"old_value,omitempty" gorm:"type:text"`           // JSON со старыми значениями
+	NewValue    string    `json:"new_value,omitempty" gorm:"type:text"`           // JSON с новыми значениями
+	Description string    `json:"description,omitempty" gorm:"type:text"`
+	IPAddress   string    `json:"ip_address,omitempty" gorm:"size:45"`
+	CreatedAt   time.Time `json:"created_at" gorm:"index"`
+}
+
+// Notification — уведомления о событиях
+type Notification struct {
+	ID        uint       `json:"id" gorm:"primaryKey"`
+	UserID    uint       `json:"user_id" gorm:"not null;index"`
+	User      *User      `json:"user,omitempty" gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE"`
+	RecordID  uint       `json:"record_id" gorm:"index"` // ID записи СЗИ
+	Record    *SZIRecord `json:"record,omitempty" gorm:"foreignKey:RecordID;constraint:OnDelete:CASCADE"`
+	Type      string     `json:"type" gorm:"size:50;not null"`      // EXPIRING_SOON, EXPIRED, CRITICAL
+	Title     string     `json:"title" gorm:"size:255;not null"`
+	Message   string     `json:"message" gorm:"type:text;not null"`
+	IsRead    bool       `json:"is_read" gorm:"default:false;index"`
+	Priority  int        `json:"priority" gorm:"default:1"` // 1=низкий, 2=средний, 3=высокий, 4=критический
+	CreatedAt time.Time  `json:"created_at" gorm:"index"`
 }
