@@ -18,7 +18,7 @@
 
 ```bash
 docker compose up -d
-DB_PASSWORD=local-dev-password go run .
+DB_PASSWORD=local-dev-password DB_PORT=5434 go run .
 ```
 
 Перед запуском должны быть доступны переменные подключения к PostgreSQL, которые использует основной проект.
@@ -27,7 +27,7 @@ DB_PASSWORD=local-dev-password go run .
 
 ```bash
 docker compose -f coursework-v2/docker-compose.yml up -d
-DB_PASSWORD=local-dev-password go run ./coursework-v2
+DB_PASSWORD=local-dev-password DB_PORT=5434 go run ./coursework-v2
 ```
 
-Остальные параметры по умолчанию: `localhost:5433`, пользователь `szi_user`, база `szi_registry`. Для другого пароля задайте `DB_PASSWORD` перед запуском Compose и приложения.
+Для новой версии используется `localhost:5434`, пользователь `szi_user`, база `szi_registry`. Для другого пароля задайте одинаковый `DB_PASSWORD` перед запуском Compose и приложения.

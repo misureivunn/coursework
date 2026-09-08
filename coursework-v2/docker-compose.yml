@@ -7,7 +7,7 @@ services:
       POSTGRES_USER: szi_user
       POSTGRES_PASSWORD: ${DB_PASSWORD:-local-dev-password}
     ports:
-      - "5433:5432"
+      - "5434:5432"
     volumes:
       - coursework_v2_pg_data:/var/lib/postgresql/data
 
