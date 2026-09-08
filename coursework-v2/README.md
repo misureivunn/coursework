@@ -21,3 +21,12 @@ go run ./coursework-v2
 ```
 
 Перед запуском должны быть доступны переменные подключения к PostgreSQL, которые использует основной проект.
+
+Если база запущена через Docker Compose, сначала выполните:
+
+```bash
+docker compose up -d postgres-szi
+DB_PASSWORD='<пароль из docker-compose.yml>' go run ./coursework-v2
+```
+
+Остальные параметры по умолчанию: `localhost:5433`, пользователь `szi_user`, база `szi_registry`.

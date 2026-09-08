@@ -15,6 +15,8 @@ func main() {
 	dbManager, err := repositories.NewDBManagerWithConfig(cfg)
 	if err != nil {
 		fmt.Printf("Ошибка подключения к базе данных: %v\n", err)
+		fmt.Println("Запустите PostgreSQL и задайте DB_PASSWORD перед запуском, например:")
+		fmt.Println("DB_PASSWORD='<пароль из docker-compose.yml>' go run ./coursework-v2")
 		return
 	}
 	defer dbManager.Close()
