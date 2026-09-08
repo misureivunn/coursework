@@ -1,11 +1,13 @@
 package ui
 
 import (
+	"szi-registry/models"
+	"szi-registry/services"
+	"time"
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
-	"time"
-	"szi-registry/models"
 )
 
 func ShowErrorDialog(message string, canvas fyne.Canvas) {
@@ -23,10 +25,10 @@ func ShowErrorDialog(message string, canvas fyne.Canvas) {
 	)
 
 	dialog = widget.NewModalPopUp(contentContainer, canvas)
-	
+
 	// Устанавливаем размер: широкий (600px) и низкий (150px)
 	dialog.Resize(fyne.NewSize(600, 150))
-	
+
 	dialog.Show()
 }
 
@@ -44,10 +46,10 @@ func ShowSuccessDialog(message string, canvas fyne.Canvas) {
 	)
 
 	dialog = widget.NewModalPopUp(contentContainer, canvas)
-	
+
 	// Устанавливаем размер: широкий и низкий
 	dialog.Resize(fyne.NewSize(600, 150))
-	
+
 	dialog.Show()
 }
 
@@ -63,31 +65,13 @@ func FormatDate(t time.Time) string {
 
 // GetRecordStatus определяет статус записи на основе даты истечения
 func GetRecordStatus(record models.SZIRecord) string {
-	status := record.Status
-	expiryDate := record.CertExpiryDate
-	now := time.Now()
-
-	// Если статус не установлен явно, определяем его по дате истечения
-	if status == "" {
-		if expiryDate.Before(now) {
-			status = "Просрочено"
-		} else {
-			// Проверяем, если срок истекает в ближайшие 30 дней
-			in30Days := now.AddDate(0, 0, 30)
-			if expiryDate.Before(in30Days) {
-				status = "Скоро истекает"
-			} else {
-				status = "Актуально"
-			}
-		}
-	}
-	return status
+	return services.CalculateSziStatus(record.CertExpiryDate, time.Now())
 }
 
 // GetCertificateStats возвращает статистику по сертификатам
 func GetCertificateStats(records []models.SZIRecord) (active, expired, noCert int) {
 	now := time.Now()
-	
+
 	for _, record := range records {
 		if record.CertExpiryDate.IsZero() {
 			noCert++
@@ -97,6 +81,6 @@ func GetCertificateStats(records []models.SZIRecord) (active, expired, noCert in
 			active++
 		}
 	}
-	
+
 	return active, expired, noCert
 }

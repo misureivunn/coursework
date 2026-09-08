@@ -1,15 +1,15 @@
 package ui
 
 import (
-	"time"
-
-	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/widget"
-	"gorm.io/gorm"
 	"szi-registry/models"
 	"szi-registry/services"
 	"szi-registry/utils/ui"
+
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/widget"
+	"gorm.io/gorm"
 )
 
 func ShowAddSziWindow(myApp fyne.App, userID uint, db *gorm.DB) {
@@ -30,6 +30,7 @@ func ShowAddSziWindow(myApp fyne.App, userID uint, db *gorm.DB) {
 	locationEntry := widget.NewEntry()
 	manufacturerEntry := widget.NewEntry()
 	softwareEntry := widget.NewEntry()
+	notesEntry := widget.NewMultiLineEntry()
 
 	// Добавляем новые поля для классификации СЗИ от НСД
 	purposeSelector := widget.NewSelect([]string{"АС", "ИВК", "Универсальное"}, func(value string) {})
@@ -49,45 +50,40 @@ func ShowAddSziWindow(myApp fyne.App, userID uint, db *gorm.DB) {
 			{Text: "Место установки", Widget: locationEntry},
 			{Text: "Производитель", Widget: manufacturerEntry},
 			{Text: "Версия ПО", Widget: softwareEntry},
+			{Text: "Примечания", Widget: notesEntry},
 		},
 		OnSubmit: func() {
 			issueDate, err := ui.ParseDate(issueDateEntry.Text)
 			if err != nil {
-				ui.ShowErrorDialog("Неверный формат даты выдачи. Используйте ГГГГ-ММ-ДД", myWindow.Canvas())
+				dialog.ShowError(err, myWindow)
 				return
 			}
 
 			expiryDate, err := ui.ParseDate(expiryDateEntry.Text)
 			if err != nil {
-				ui.ShowErrorDialog("Неверный формат срока действия. Используйте ГГГГ-ММ-ДД", myWindow.Canvas())
+				dialog.ShowError(err, myWindow)
 				return
 			}
 
 			newRecord := &models.SZIRecord{
-				Name:              nameEntry.Text,
-				Type:              typeSelector.Selected, // Используем выбранный тип из выпадающего списка
-				CertNumber:        certNumberEntry.Text,
-				CertIssueDate:     issueDate,
-				CertExpiryDate:    expiryDate,
-				Location:          locationEntry.Text,
-				UserID:            userID,
-				Manufacturer:      manufacturerEntry.Text,
-				SoftwareVersion:   softwareEntry.Text,
+				Name:            nameEntry.Text,
+				Type:            typeSelector.Selected, // Используем выбранный тип из выпадающего списка
+				CertNumber:      certNumberEntry.Text,
+				CertIssueDate:   issueDate,
+				CertExpiryDate:  expiryDate,
+				Location:        locationEntry.Text,
+				UserID:          userID,
+				Manufacturer:    manufacturerEntry.Text,
+				SoftwareVersion: softwareEntry.Text,
+				Notes:           notesEntry.Text,
 				Purpose:         purposeSelector.Selected,
 				DeploymentType:  deploymentTypeSelector.Selected,
 				ClassProtection: classProtectionSelector.Selected,
 			}
 
-			if expiryDate.Before(time.Now()) {
-				newRecord.Status = "Просрочено"
-			} else {
-				newRecord.Status = "Актуально"
-			}
-
 			err = services.AddSziRecord(db, newRecord)
 			if err != nil {
-				dialog := widget.NewModalPopUp(widget.NewLabel("Ошибка при добавлении записи: "+err.Error()), myWindow.Canvas())
-				dialog.Show()
+				dialog.ShowError(err, myWindow)
 				return
 			}
 
@@ -110,8 +106,10 @@ func ShowAddSziWindow(myApp fyne.App, userID uint, db *gorm.DB) {
 	scrollContainer.SetMinSize(fyne.NewSize(580, 400))
 	buttonContainer := container.NewHBox(
 		widget.NewButton("Назад", func() { myWindow.Close() }),
-		widget.NewButton("Добавить", func() { form.OnSubmit() }),
 	)
+	addButton := widget.NewButton("Добавить", func() { form.OnSubmit() })
+	addButton.Importance = widget.DangerImportance
+	buttonContainer.Add(addButton)
 
 	content := container.NewBorder(
 		nil,

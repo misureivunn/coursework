@@ -14,7 +14,7 @@ import (
 
 func ShowLoginWindow(myApp fyne.App, db *gorm.DB) {
 	myWindow := myApp.NewWindow("Вход в Реестр СЗИ")
-	myWindow.Resize(fyne.NewSize(400, 250))
+	myWindow.Resize(fyne.NewSize(460, 360))
 
 	usernameEntry := widget.NewEntry()
 	usernameEntry.SetPlaceHolder("Введите имя пользователя")
@@ -28,16 +28,21 @@ func ShowLoginWindow(myApp fyne.App, db *gorm.DB) {
 	var loginButton *widget.Button
 
 	loginFunc := func() {
+		if usernameEntry.Text == "" || passwordEntry.Text == "" {
+			errorLabel.SetText("Введите логин и пароль")
+			return
+		}
 		user, err := services.AuthenticateUser(db, usernameEntry.Text, passwordEntry.Text)
 		if err != nil {
-			errorLabel.SetText(err.Error())
+			errorLabel.SetText("Неверный логин или пароль")
 		} else {
 			myWindow.Close()
-			ShowDashboardWindow(myApp, user.Username, db)
+			ShowSZIRegistryWindow(myApp, user.Username, db)
 		}
 	}
 
 	loginButton = widget.NewButtonWithIcon("Войти", nil, loginFunc)
+	loginButton.Importance = widget.DangerImportance
 
 	buttonWithErrorContainer := container.NewVBox(loginButton, errorLabel)
 
@@ -45,12 +50,17 @@ func ShowLoginWindow(myApp fyne.App, db *gorm.DB) {
 	registerButton := widget.NewButton("Регистрация", func() {
 		ShowRegisterWindow(myApp, db)
 	})
+	registerButton.Importance = widget.DangerImportance
 
-	usernameEntry.Resize(fyne.NewSize(400, 30))
-	passwordEntry.Resize(fyne.NewSize(400, 30))
+	usernameEntry.Resize(fyne.NewSize(400, 36))
+	passwordEntry.Resize(fyne.NewSize(400, 36))
+
+	title := canvas.NewText("Вход в реестр СЗИ", color.NRGBA{R: 26, G: 60, B: 110, A: 255})
+	title.TextStyle = fyne.TextStyle{Bold: true}
+	title.Alignment = fyne.TextAlignCenter
 
 	content := container.NewVBox(
-		widget.NewLabel("Добро пожаловать в Реестр СЗИ"),
+		title,
 		widget.NewSeparator(), // Разделитель
 		container.NewPadded(container.NewVBox(
 			widget.NewLabel("Имя пользователя"),
@@ -65,7 +75,7 @@ func ShowLoginWindow(myApp fyne.App, db *gorm.DB) {
 	)
 
 	background := canvas.NewRectangle(color.RGBA{R: 240, G: 240, B: 240, A: 255})
-	backgroundContainer := container.NewStack(background, container.NewCenter(content))
+	backgroundContainer := container.NewStack(background, container.NewCenter(container.NewPadded(content)))
 
 	myWindow.SetContent(backgroundContainer)
 	myWindow.Show()

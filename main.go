@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"szi-registry/config"
+	"szi-registry/models"
 	"szi-registry/repositories"
 	"szi-registry/ui"
 
@@ -24,8 +25,11 @@ func main() {
 	defer dbManager.Close()
 	fmt.Println("4. Успешно подключились к базе данных")
 
+	dbManager.DB.AutoMigrate(&models.User{}, &models.SZIRecord{}, &models.ReadNotification{}, &models.SZIAuditLog{})
+
 	fmt.Println("5. Создаем приложение...")
 	myApp := app.NewWithID("szi.registry.app")
+	ui.ApplyFSTECTheme(myApp)
 	fmt.Println("6. Приложение создано")
 
 	fmt.Println("7. Открываем окно входа...")

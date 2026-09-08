@@ -29,7 +29,7 @@ func ExportToCSV(records []models.SZIRecord, filename string) error {
 		"Наименование", "Тип", "Номер сертификата",
 		"Дата выдачи", "Срок действия", "Место установки",
 		"Статус", "Производитель", "Версия ПО", "Назначение",
-		"Тип развертывания", "Класс защищенности", "Дата создания", "Дата обновления",
+		"Тип развертывания", "Класс защищенности", "Дата создания", "Дата обновления", "Примечания",
 	}
 
 	err = writer.Write(headers)
@@ -40,20 +40,21 @@ func ExportToCSV(records []models.SZIRecord, filename string) error {
 	// Записываем данные (без ID)
 	for _, record := range records {
 		row := []string{
-			record.Name,                  // Наименование
-			record.Type,                  // Тип
-			record.CertNumber,            // Номер сертификата
+			record.Name,       // Наименование
+			record.Type,       // Тип
+			record.CertNumber, // Номер сертификата
 			record.CertIssueDate.Format("2006-01-02"),  // Дата выдачи
 			record.CertExpiryDate.Format("2006-01-02"), // Срок действия
-			record.Location,                                // Место установки
-			record.Status,                                  // Статус
-			record.Manufacturer,                            // Производитель
-			record.SoftwareVersion,                         // Версия ПО
-			record.Purpose,                                 // Назначение
-			record.DeploymentType,                          // Тип развертывания
-			record.ClassProtection,                         // Класс защищенности
+			record.Location,        // Место установки
+			record.Status,          // Статус
+			record.Manufacturer,    // Производитель
+			record.SoftwareVersion, // Версия ПО
+			record.Purpose,         // Назначение
+			record.DeploymentType,  // Тип развертывания
+			record.ClassProtection, // Класс защищенности
 			record.CreatedAt.Format("2006-01-02 15:04:05"), // Дата создания
 			record.UpdatedAt.Format("2006-01-02 15:04:05"), // Дата обновления
+			record.Notes, // Примечания
 		}
 
 		err = writer.Write(row)

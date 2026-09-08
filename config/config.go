@@ -20,7 +20,7 @@ func LoadConfig() *Config {
 		DBHost:     getEnvOrDefault("DB_HOST", "localhost"),
 		DBPort:     getEnvOrDefault("DB_PORT", "5433"),
 		DBUser:     getEnvOrDefault("DB_USER", "szi_user"),
-		DBPassword: getEnvOrDefault("DB_PASSWORD", "MyV3ryS3cur3P@ss2026!"),
+		DBPassword: os.Getenv("DB_PASSWORD"),
 		DBName:     getEnvOrDefault("DB_NAME", "szi_registry"),
 	}
 }
@@ -35,6 +35,9 @@ func getEnvOrDefault(key, defaultValue string) string {
 
 // возвращает строку подключения к базе данных
 func (c *Config) GetDSN() string {
+	if c.DBPassword == "" {
+		return ""
+	}
 	return fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 		c.DBHost, c.DBPort, c.DBUser, c.DBPassword, c.DBName)
 }

@@ -2,6 +2,8 @@ package ui
 
 import (
 	"fmt"
+	"image/color"
+	"strings"
 	"szi-registry/csvimport"
 	"szi-registry/export"
 	"szi-registry/models"
@@ -10,6 +12,7 @@ import (
 	"time"
 
 	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
@@ -263,7 +266,7 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 	nameFilter.SetPlaceHolder("Поиск по наименованию...")
 	typeFilter := widget.NewSelectEntry([]string{"СКЗИ", "ОС", "СЗИ КС", "СЗИ СКЗИ", "Другое"})
 	typeFilter.SetPlaceHolder("Тип СЗИ...")
-	statusFilter := widget.NewSelectEntry([]string{"Актуально", "Просрочено", "Снято"})
+	statusFilter := widget.NewSelectEntry([]string{"Актуально", "Требует внимания", "Просрочено"})
 	statusFilter.SetPlaceHolder("Статус...")
 	locationFilter := widget.NewEntry()
 	locationFilter.SetPlaceHolder("Место установки...")
@@ -355,6 +358,7 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 	addBtn := widget.NewButton("Добавить СЗИ", func() {
 		ShowAddSziWindow(myApp, uint(user.ID), db)
 	})
+	addBtn.Importance = widget.DangerImportance
 
 	// Кнопки навигации по страницам
 	prevPageBtn := widget.NewButton("Предыдущая", func() {
@@ -524,11 +528,154 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 		exportSuccessDialog.Show()
 	})
 
-	// Контейнер для кнопок управления
-	controlButtonsContainer := container.NewHBox(addBtn, importBtn, exportBtn)
+	// --- Уведомления о сертификатах ---
+	getCertificateNotifications := func(records []models.SZIRecord) []string {
+		var notifications []string
+		now := time.Now()
+		warningPeriod := 30 * 24 * time.Hour // 30 дней
 
-	// Устанавливаем высоту строк ДО создания контейнеров
-	// (уже установлено выше)
+		for _, record := range records {
+			if record.CertExpiryDate.Before(now) {
+				notifications = append(notifications,
+					fmt.Sprintf("cert_expired_%d|Срок действия сертификата для '%s' истёк (%s)", record.ID, record.Name, record.CertExpiryDate.Format("2006-01-02")))
+			} else if record.CertExpiryDate.Sub(now) <= warningPeriod {
+				notifications = append(notifications,
+					fmt.Sprintf("cert_warning_%d|Сертификат для '%s' истекает %s", record.ID, record.Name, record.CertExpiryDate.Format("2006-01-02")))
+			}
+		}
+		return notifications
+	}
+
+	// Функция для загрузки прочитанных уведомлений из БД
+	loadReadNotifications := func() map[string]struct{} {
+		readSet := make(map[string]struct{})
+		var readNotifs []models.ReadNotification
+		db.Where("user_id = ?", user.ID).Find(&readNotifs)
+		for _, rn := range readNotifs {
+			readSet[rn.NotificationKey] = struct{}{}
+		}
+		return readSet
+	}
+
+	// Функция для сохранения прочитанного уведомления в БД
+	saveReadNotification := func(notificationKey string) {
+		readNotif := models.ReadNotification{
+			UserID:          user.ID,
+			NotificationKey: notificationKey,
+		}
+		db.Create(&readNotif)
+	}
+
+	// --- Вспомогательные функции для обновления списков уведомлений ---
+	var buildNewList func([]string, map[string]struct{}, *container.AppTabs, []string) *fyne.Container
+	var buildArchiveList func([]string, []string, map[string]struct{}) *fyne.Container
+
+	buildNewList = func(newNotifications []string, readSet map[string]struct{}, tabContainer *container.AppTabs, archivedNotifications []string) *fyne.Container {
+		list := container.NewVBox()
+		for _, n := range newNotifications {
+			// Извлекаем ключ из формата "ключ|текст"
+			parts := strings.SplitN(n, "|", 2)
+			if len(parts) != 2 {
+				continue
+			}
+			key := parts[0]
+			text := parts[1]
+
+			if _, wasRead := readSet[key]; wasRead {
+				continue
+			}
+
+			notificationText := widget.NewLabel(text)
+			markReadBtn := widget.NewButton("Прочитано", func(notifKey string) func() {
+				return func() {
+					readSet[notifKey] = struct{}{}
+					saveReadNotification(notifKey)
+					if tabContainer != nil {
+						tabContainer.Items[0].Content = container.NewVScroll(buildNewList(newNotifications, readSet, tabContainer, archivedNotifications))
+						tabContainer.Items[1].Content = container.NewVScroll(buildArchiveList(archivedNotifications, newNotifications, readSet))
+						tabContainer.Refresh()
+					}
+				}
+			}(key))
+			row := container.NewBorder(nil, nil, nil, markReadBtn, notificationText)
+			list.Add(row)
+		}
+		if len(list.Objects) == 0 {
+			list.Add(widget.NewLabel("Нет новых уведомлений"))
+		}
+		return list
+	}
+
+	buildArchiveList = func(archivedNotifications []string, newNotifications []string, readSet map[string]struct{}) *fyne.Container {
+		list := container.NewVBox()
+		for _, n := range newNotifications {
+			parts := strings.SplitN(n, "|", 2)
+			if len(parts) != 2 {
+				continue
+			}
+			key := parts[0]
+			text := parts[1]
+
+			if _, wasRead := readSet[key]; wasRead {
+				list.Add(widget.NewLabel(text))
+			}
+		}
+		for _, n := range archivedNotifications {
+			parts := strings.SplitN(n, "|", 2)
+			if len(parts) == 2 {
+				list.Add(widget.NewLabel(parts[1]))
+			}
+		}
+		if len(list.Objects) == 0 {
+			list.Add(widget.NewLabel("Архив пуст"))
+		}
+		return list
+	}
+
+	// Кнопка уведомлений с историей/архивом и возможностью пометить как прочитанное
+	var notificationsBtn *widget.Button
+
+	notificationsBtn = widget.NewButton("Уведомления", func() {
+		records, err := services.GetUserRecords(db, uint(user.ID))
+		if err != nil {
+			ui.ShowErrorDialog("Ошибка при загрузке записей для уведомлений: "+err.Error(), myWindow.Canvas())
+			return
+		}
+		allNotifications := getCertificateNotifications(records)
+
+		// Загружаем прочитанные уведомления из БД
+		readSet := loadReadNotifications()
+
+		var newNotifications, archivedNotifications []string
+		for _, n := range allNotifications {
+			parts := strings.SplitN(n, "|", 2)
+			if len(parts) != 2 {
+				continue
+			}
+			key := parts[0]
+
+			if _, wasRead := readSet[key]; wasRead {
+				archivedNotifications = append(archivedNotifications, n)
+			} else {
+				newNotifications = append(newNotifications, n)
+			}
+		}
+
+		minSize := fyne.NewSize(600, 400)
+		tabs := container.NewAppTabs()
+		// Создаем контейнеры для вкладок, передаем ссылку на tabs для обновления
+		newTabContent := container.NewVScroll(buildNewList(newNotifications, readSet, tabs, archivedNotifications))
+		archiveTabContent := container.NewVScroll(buildArchiveList(archivedNotifications, newNotifications, readSet))
+		tabs.Append(container.NewTabItem("Новые", newTabContent))
+		tabs.Append(container.NewTabItem("Архив", archiveTabContent))
+		tabs.SetTabLocation(container.TabLocationTop)
+		tabs.Resize(minSize)
+
+		dialog.ShowCustom("Уведомления", "Закрыть", tabs, myWindow)
+	})
+
+	// Контейнер для кнопок управления
+	controlButtonsContainer := container.NewHBox(addBtn, importBtn, exportBtn, notificationsBtn)
 
 	// Обработка нажатий на таблицу данных
 	dataTable.OnSelected = func(id widget.TableCellID) {
@@ -548,21 +695,23 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 							}},
 							{Label: "Удалить", Action: func() {
 								var deleteDialog *widget.PopUp
+								deleteButton := widget.NewButton("Да", func() {
+									err := services.DeleteSziRecord(db, uint(user.ID), selectedRecord.ID)
+									if err != nil {
+										ui.ShowErrorDialog("Ошибка при удалении записи: "+err.Error(), myWindow.Canvas())
+									} else {
+										ShowSZIRegistryWindow(myApp, username, db)
+										myWindow.Close()
+									}
+									deleteDialog.Hide()
+								})
+								deleteButton.Importance = widget.DangerImportance
 
 								deleteDialog = widget.NewModalPopUp(
 									container.NewVBox(
 										widget.NewLabel("Вы уверены, что хотите удалить запись '"+selectedRecord.Name+"'?"),
 										container.NewHBox(
-											widget.NewButton("Да", func() {
-												err := services.DeleteSziRecord(db, uint(user.ID), selectedRecord.ID)
-												if err != nil {
-													ui.ShowErrorDialog("Ошибка при удалении записи: "+err.Error(), myWindow.Canvas())
-												} else {
-													ShowSZIRegistryWindow(myApp, username, db)
-													myWindow.Close()
-												}
-												deleteDialog.Hide()
-											}),
+											deleteButton,
 											widget.NewButton("Нет", func() {
 												deleteDialog.Hide()
 											}),
@@ -615,6 +764,11 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 		tableScroll, // Прокручиваемая таблица данных
 	)
 
+	title := canvas.NewText("Реестр средств защиты информации от несанкционированного доступа", color.NRGBA{R: 26, G: 60, B: 110, A: 255})
+	title.TextStyle = fyne.TextStyle{Bold: true}
+	subtitle := canvas.NewText("Федеральная служба по техническому и экспортному контролю", color.NRGBA{R: 80, G: 80, B: 80, A: 255})
+	heading := container.NewVBox(title, subtitle, widget.NewSeparator())
+
 	// Создаем контейнер с правильным расположением элементов
 	content := container.NewBorder(
 		filterContainer, // верхняя часть - фильтры
@@ -624,12 +778,8 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 		tableWithHeaders, // центральная часть - заголовки и таблица
 	)
 
-	// Кнопки навигации (слева)
+	// После входа пользователь сразу работает с реестром.
 	navButtons := container.NewHBox(
-		widget.NewButton("Назад", func() {
-			myWindow.Close()
-			ShowDashboardWindow(myApp, username, db)
-		}),
 		widget.NewButton("Выход", func() {
 			myWindow.Close()
 			ShowLoginWindow(myApp, db)
@@ -640,13 +790,16 @@ func ShowSZIRegistryWindow(myApp fyne.App, username string, db *gorm.DB) {
 	filterButtons := container.NewHBox(
 		widget.NewButton("Применить фильтры", applyFilters),
 		widget.NewButton("Сбросить фильтры", resetFilters),
+		widget.NewButton("Статистика", func() {
+			showStatisticsWindow(myApp, uint(user.ID), db)
+		}),
 	)
 
 	// Объединяем в toolbar с Border layout
 	toolbar := container.NewBorder(nil, nil, navButtons, filterButtons, nil)
 
 	// Объединяем основной контент с панелью инструментов
-	finalContent := container.NewBorder(toolbar, nil, nil, nil, content)
+	finalContent := container.NewBorder(container.NewVBox(heading, toolbar), nil, nil, nil, content)
 
 	myWindow.SetContent(finalContent)
 

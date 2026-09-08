@@ -1,13 +1,15 @@
 package ui
 
 import (
-	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/widget"
-	"gorm.io/gorm"
 	"szi-registry/models"
 	"szi-registry/services"
 	"szi-registry/utils/ui"
+
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/widget"
+	"gorm.io/gorm"
 )
 
 func ShowEditSziWindow(myApp fyne.App, record models.SZIRecord, db *gorm.DB) {
@@ -32,12 +34,12 @@ func ShowEditSziWindow(myApp fyne.App, record models.SZIRecord, db *gorm.DB) {
 
 	locationEntry := widget.NewEntry()
 	locationEntry.SetText(record.Location)
-	statusEntry := widget.NewEntry()
-	statusEntry.SetText(record.Status)
 	manufacturerEntry := widget.NewEntry()
 	manufacturerEntry.SetText(record.Manufacturer)
 	softwareVersionEntry := widget.NewEntry()
 	softwareVersionEntry.SetText(record.SoftwareVersion)
+	notesEntry := widget.NewMultiLineEntry()
+	notesEntry.SetText(record.Notes)
 
 	// Добавляем новые поля для классификации СЗИ от НСД
 	purposeSelector := widget.NewSelect([]string{"АС", "ИВК", "Универсальное"}, func(value string) {})
@@ -58,20 +60,20 @@ func ShowEditSziWindow(myApp fyne.App, record models.SZIRecord, db *gorm.DB) {
 			{Text: "Дата выдачи (ГГГГ-ММ-ДД)", Widget: issueDateEntry},
 			{Text: "Срок действия (ГГГГ-ММ-ДД)", Widget: expiryDateEntry},
 			{Text: "Место установки", Widget: locationEntry},
-			{Text: "Статус", Widget: statusEntry},
 			{Text: "Производитель", Widget: manufacturerEntry},
 			{Text: "Версия ПО", Widget: softwareVersionEntry},
+			{Text: "Примечания", Widget: notesEntry},
 		},
 		OnSubmit: func() {
 			issueDate, err := ui.ParseDate(issueDateEntry.Text)
 			if err != nil {
-				ui.ShowErrorDialog("Неверный формат даты выдачи. Используйте ГГГГ-ММ-ДД", myWindow.Canvas())
+				dialog.ShowError(err, myWindow)
 				return
 			}
 
 			expiryDate, err := ui.ParseDate(expiryDateEntry.Text)
 			if err != nil {
-				ui.ShowErrorDialog("Неверный формат срока действия. Используйте ГГГГ-ММ-ДД", myWindow.Canvas())
+				dialog.ShowError(err, myWindow)
 				return
 			}
 
@@ -81,17 +83,16 @@ func ShowEditSziWindow(myApp fyne.App, record models.SZIRecord, db *gorm.DB) {
 			record.CertIssueDate = issueDate
 			record.CertExpiryDate = expiryDate
 			record.Location = locationEntry.Text
-			record.Status = statusEntry.Text
 			record.Manufacturer = manufacturerEntry.Text
 			record.SoftwareVersion = softwareVersionEntry.Text
+			record.Notes = notesEntry.Text
 			record.Purpose = purposeSelector.Selected
 			record.DeploymentType = deploymentTypeSelector.Selected
 			record.ClassProtection = classProtectionSelector.Selected
 
-			err = services.UpdateSziRecord(db, &record)
+			err = services.UpdateSziRecord(db, record.UserID, &record)
 			if err != nil {
-				dialog := widget.NewModalPopUp(widget.NewLabel("Ошибка при обновлении записи: "+err.Error()), myWindow.Canvas())
-				dialog.Show()
+				dialog.ShowError(err, myWindow)
 				return
 			}
 
@@ -107,15 +108,16 @@ func ShowEditSziWindow(myApp fyne.App, record models.SZIRecord, db *gorm.DB) {
 	issueDateEntry.Resize(fyne.NewSize(350, 30))
 	expiryDateEntry.Resize(fyne.NewSize(350, 30))
 	locationEntry.Resize(fyne.NewSize(350, 30))
-	statusEntry.Resize(fyne.NewSize(350, 30))
 	manufacturerEntry.Resize(fyne.NewSize(350, 30))
 	softwareVersionEntry.Resize(fyne.NewSize(350, 30))
 	scrollContainer := container.NewVScroll(form)
 	scrollContainer.SetMinSize(fyne.NewSize(580, 400))
 	buttonContainer := container.NewHBox(
 		widget.NewButton("Назад", func() { myWindow.Close() }),
-		widget.NewButton("Сохранить", func() { form.OnSubmit() }),
 	)
+	saveButton := widget.NewButton("Сохранить", func() { form.OnSubmit() })
+	saveButton.Importance = widget.DangerImportance
+	buttonContainer.Add(saveButton)
 
 	content := container.NewBorder(
 		nil,

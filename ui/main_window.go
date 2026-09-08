@@ -3,17 +3,18 @@ package ui
 import (
 	"fmt"
 	"strings"
+	"szi-registry/export"
+	"szi-registry/models"
+	"szi-registry/services"
+	"szi-registry/utils/ui"
+	"time"
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/widget"
 	"gorm.io/gorm"
-	"szi-registry/export"
-	"szi-registry/models"
-	"szi-registry/services"
-	"szi-registry/utils/ui"
-	"time"
 )
 
 // ShowMainWindow отображает главное окно приложения
@@ -192,7 +193,7 @@ func ShowMainWindow(myApp fyne.App, username string, db *gorm.DB) {
 	nameFilter.SetPlaceHolder("Поиск по наименованию...")
 	typeFilter := widget.NewSelectEntry([]string{"СКЗИ", "ОС", "СЗИ КС", "СЗИ СКЗИ", "Другое"})
 	typeFilter.SetPlaceHolder("Тип СЗИ...")
-	statusFilter := widget.NewSelectEntry([]string{"Актуально", "Просрочено", "Снято"})
+	statusFilter := widget.NewSelectEntry([]string{"Актуально", "Требует внимания", "Просрочено"})
 	statusFilter.SetPlaceHolder("Статус...")
 	locationFilter := widget.NewEntry()
 	locationFilter.SetPlaceHolder("Место установки...")
@@ -421,11 +422,11 @@ func ShowMainWindow(myApp fyne.App, username string, db *gorm.DB) {
 	)
 
 	content := container.NewBorder(
-		filterContainer,                                     // верхняя часть - фильтры
-		bottomPanel,                                         // нижняя часть - дополнительные кнопки
-		nil,                                                 // левая часть - нет
-		nil,                                                 // правая часть - нет
-		tableWithHeaders,                                    // центральная часть - заголовки и таблица
+		filterContainer,  // верхняя часть - фильтры
+		bottomPanel,      // нижняя часть - дополнительные кнопки
+		nil,              // левая часть - нет
+		nil,              // правая часть - нет
+		tableWithHeaders, // центральная часть - заголовки и таблица
 	)
 	// Объединяем основной контент с верхней панелью инструментов
 	finalContent := container.NewBorder(topToolbar, nil, nil, nil, content)

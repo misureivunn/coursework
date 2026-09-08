@@ -40,7 +40,13 @@ func ImportFromCSV(filename string, userID uint) ([]models.SZIRecord, error) {
 	var expectedHeaders []string
 	var hasIDColumn bool
 
-	if len(headers) == 15 { // со столбцом ID
+	if len(headers) == 16 { // новый формат со столбцом ID и примечаниями
+		expectedHeaders = []string{"ID", "Наименование", "Тип", "Номер сертификата", "Дата выдачи", "Срок действия", "Место установки", "Статус", "Производитель", "Версия ПО", "Назначение", "Тип развертывания", "Класс защищенности", "Дата создания", "Дата обновления", "Примечания"}
+		hasIDColumn = true
+	} else if len(headers) == 15 && !strings.EqualFold(strings.TrimSpace(headers[0]), "ID") { // новый формат без ID
+		expectedHeaders = []string{"Наименование", "Тип", "Номер сертификата", "Дата выдачи", "Срок действия", "Место установки", "Статус", "Производитель", "Версия ПО", "Назначение", "Тип развертывания", "Класс защищенности", "Дата создания", "Дата обновления", "Примечания"}
+		hasIDColumn = false
+	} else if len(headers) == 15 { // старый формат со столбцом ID
 		expectedHeaders = []string{
 			"ID", "Наименование", "Тип", "Номер сертификата",
 			"Дата выдачи", "Срок действия", "Место установки",
@@ -57,7 +63,7 @@ func ImportFromCSV(filename string, userID uint) ([]models.SZIRecord, error) {
 		}
 		hasIDColumn = false
 	} else {
-		return nil, fmt.Errorf("некорректное количество столбцов в CSV файле: ожидается 14 или 15 столбцов, получено %d", len(headers))
+		return nil, fmt.Errorf("некорректное количество столбцов в CSV файле: ожидается 14, 15 или 16 столбцов, получено %d", len(headers))
 	}
 
 	// Сравниваем заголовки (без учета регистра и пробелов)
@@ -84,6 +90,8 @@ func ImportFromCSV(filename string, userID uint) ([]models.SZIRecord, error) {
 		if err != nil {
 			return nil, fmt.Errorf("ошибка при парсинге даты выдачи в строке %d: %v", rowIndex+2, err)
 		}
+		// Нормализуем дату до UTC и обнуляем время
+		issueDate = time.Date(issueDate.Year(), issueDate.Month(), issueDate.Day(), 0, 0, 0, 0, time.UTC)
 
 		// Парсим дату истечения
 		expiryDateIndex := 4
@@ -94,6 +102,8 @@ func ImportFromCSV(filename string, userID uint) ([]models.SZIRecord, error) {
 		if err != nil {
 			return nil, fmt.Errorf("ошибка при парсинге срока действия в строке %d: %v", rowIndex+2, err)
 		}
+		// Нормализуем дату до UTC и обнуляем время
+		expiryDate = time.Date(expiryDate.Year(), expiryDate.Month(), expiryDate.Day(), 0, 0, 0, 0, time.UTC)
 
 		// Определяем статус на основе даты истечения
 		statusIndex := 6
@@ -106,10 +116,10 @@ func ImportFromCSV(filename string, userID uint) ([]models.SZIRecord, error) {
 			if expiryDate.Before(now) {
 				status = "Просрочено"
 			} else {
-				// Проверяем, если срок истекает в ближайшие 30 дней
-				in30Days := now.AddDate(0, 0, 30)
-				if expiryDate.Before(in30Days) {
-					status = "Скоро истекает"
+				// Проверяем, если срок истекает в ближайшие 60 дней
+				in60Days := now.AddDate(0, 0, 60)
+				if expiryDate.Before(in60Days) {
+					status = "Требует внимания"
 				} else {
 					status = "Актуально"
 				}
@@ -131,17 +141,17 @@ func ImportFromCSV(filename string, userID uint) ([]models.SZIRecord, error) {
 			}
 
 			sziRecord = models.SZIRecord{
-				ID:                id,
-				Name:              strings.TrimSpace(row[1]),
-				Type:              strings.TrimSpace(row[2]),
-				CertNumber:        strings.TrimSpace(row[3]),
-				CertIssueDate:     issueDate,
-				CertExpiryDate:    expiryDate,
-				Location:          strings.TrimSpace(row[6]),
-				Status:            status,
-				UserID:            userID, // Привязываем к текущему пользователю
-				Manufacturer:      strings.TrimSpace(row[8]),
-				SoftwareVersion:   strings.TrimSpace(row[9]),
+				ID:              id,
+				Name:            strings.TrimSpace(row[1]),
+				Type:            strings.TrimSpace(row[2]),
+				CertNumber:      strings.TrimSpace(row[3]),
+				CertIssueDate:   issueDate,
+				CertExpiryDate:  expiryDate,
+				Location:        strings.TrimSpace(row[6]),
+				Status:          status,
+				UserID:          userID, // Привязываем к текущему пользователю
+				Manufacturer:    strings.TrimSpace(row[8]),
+				SoftwareVersion: strings.TrimSpace(row[9]),
 
 				// Поля для классификации СЗИ от НСД
 				Purpose:         strings.TrimSpace(row[10]),
@@ -151,16 +161,16 @@ func ImportFromCSV(filename string, userID uint) ([]models.SZIRecord, error) {
 		} else {
 			// Если нет ID в файле, создаем запись без него
 			sziRecord = models.SZIRecord{
-				Name:              strings.TrimSpace(row[0]),
-				Type:              strings.TrimSpace(row[1]),
-				CertNumber:        strings.TrimSpace(row[2]),
-				CertIssueDate:     issueDate,
-				CertExpiryDate:    expiryDate,
-				Location:          strings.TrimSpace(row[5]),
-				Status:            status,
-				UserID:            userID, // Привязываем к текущему пользователю
-				Manufacturer:      strings.TrimSpace(row[7]),
-				SoftwareVersion:   strings.TrimSpace(row[8]),
+				Name:            strings.TrimSpace(row[0]),
+				Type:            strings.TrimSpace(row[1]),
+				CertNumber:      strings.TrimSpace(row[2]),
+				CertIssueDate:   issueDate,
+				CertExpiryDate:  expiryDate,
+				Location:        strings.TrimSpace(row[5]),
+				Status:          status,
+				UserID:          userID, // Привязываем к текущему пользователю
+				Manufacturer:    strings.TrimSpace(row[7]),
+				SoftwareVersion: strings.TrimSpace(row[8]),
 
 				// Поля для классификации СЗИ от НСД
 				Purpose:         strings.TrimSpace(row[9]),
@@ -197,6 +207,13 @@ func ImportFromCSV(filename string, userID uint) ([]models.SZIRecord, error) {
 		} else {
 			sziRecord.UpdatedAt = time.Now()
 		}
+		notesIndex := 14
+		if hasIDColumn {
+			notesIndex = 15
+		}
+		if len(row) > notesIndex {
+			sziRecord.Notes = strings.TrimSpace(row[notesIndex])
+		}
 
 		importedRecords = append(importedRecords, sziRecord)
 	}
@@ -216,16 +233,16 @@ func parseDateTime(dateStr string) (time.Time, error) {
 		"2006-01-02 15:04:05",
 		"2006-01-02T15:04:05Z07:00",
 		"2006-01-02T15:04:05",
-		"02.01.2006 15:04:05", 
-		"02/01/2006 15:04:05", 
-		"2006-01-02",          
-		"02.01.2006",          
-		"02/01/2006",          
-		"02-Jan-2006",         
-		"02-Jan-2006 15:04:05", 
-		"Jan 02, 2006",       
-		"Jan 02, 2006 15:04:05", 
-		"1",             
+		"02.01.2006 15:04:05",
+		"02/01/2006 15:04:05",
+		"2006-01-02",
+		"02.01.2006",
+		"02/01/2006",
+		"02-Jan-2006",
+		"02-Jan-2006 15:04:05",
+		"Jan 02, 2006",
+		"Jan 02, 2006 15:04:05",
+		"1",
 	}
 
 	for _, format := range formats {

@@ -74,8 +74,10 @@ func ShowRegisterWindow(myApp fyne.App, db *gorm.DB) {
 
 	buttonContainer := container.NewHBox(
 		widget.NewButton("Назад", func() { MyWindow.Close() }),
-		widget.NewButton("Зарегистрироваться", func() { onSubmit() }),
 	)
+	registerButton := widget.NewButton("Зарегистрироваться", func() { onSubmit() })
+	registerButton.Importance = widget.DangerImportance
+	buttonContainer.Add(registerButton)
 
 	content := container.NewBorder(
 		nil,

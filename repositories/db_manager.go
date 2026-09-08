@@ -1,6 +1,7 @@
 package repositories
 
 import (
+	"fmt"
 	"szi-registry/config"
 	"szi-registry/models"
 
@@ -15,18 +16,14 @@ type DBManager struct {
 
 // создает новый менеджер базы данных с настройками по умолчанию
 func NewDBManager() (*DBManager, error) {
-	cfg := &config.Config{
-		DBHost:     "localhost",
-		DBPort:     "5433",
-		DBUser:     "szi_user",
-		DBPassword: "MyV3ryS3cur3P@ss2026!",
-		DBName:     "szi_registry",
-	}
-	return NewDBManagerWithConfig(cfg)
+	return NewDBManagerWithConfig(config.LoadConfig())
 }
 
 // создает новый менеджер базы данных с указанной конфигурацией
 func NewDBManagerWithConfig(cfg *config.Config) (*DBManager, error) {
+	if cfg.DBPassword == "" {
+		return nil, fmt.Errorf("переменная окружения DB_PASSWORD не задана")
+	}
 	dsn := cfg.GetDSN()
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
@@ -37,7 +34,6 @@ func NewDBManagerWithConfig(cfg *config.Config) (*DBManager, error) {
 	err = db.AutoMigrate(
 		&models.User{},
 		&models.SZIRecord{},
-		&models.UserRole{},
 	)
 	if err != nil {
 		return nil, err
