@@ -14,19 +14,20 @@
 
 ## Запуск
 
-Из корня репозитория:
+Из папки `coursework-v2`:
 
 ```bash
-go run ./coursework-v2
+docker compose up -d
+DB_PASSWORD=local-dev-password go run .
 ```
 
 Перед запуском должны быть доступны переменные подключения к PostgreSQL, которые использует основной проект.
 
-Если база запущена через Docker Compose, сначала выполните:
+Если запускаете команды из корня репозитория:
 
 ```bash
-docker compose up -d postgres-szi
-DB_PASSWORD='<пароль из docker-compose.yml>' go run ./coursework-v2
+docker compose -f coursework-v2/docker-compose.yml up -d
+DB_PASSWORD=local-dev-password go run ./coursework-v2
 ```
 
-Остальные параметры по умолчанию: `localhost:5433`, пользователь `szi_user`, база `szi_registry`.
+Остальные параметры по умолчанию: `localhost:5433`, пользователь `szi_user`, база `szi_registry`. Для другого пароля задайте `DB_PASSWORD` перед запуском Compose и приложения.
