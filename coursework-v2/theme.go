@@ -26,7 +26,7 @@ func (t courseworkTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVaria
 	case theme.ColorNameForeground:
 		return color.NRGBA{R: 235, G: 239, B: 235, A: 255}
 	case theme.ColorNameForegroundOnPrimary:
-		return color.NRGBA{R: 16, G: 24, B: 18, A: 255}
+		return color.NRGBA{R: 0, G: 0, B: 0, A: 255}
 	case theme.ColorNamePlaceHolder, theme.ColorNameDisabled:
 		return color.NRGBA{R: 164, G: 174, B: 180, A: 255}
 	case theme.ColorNameHover:
@@ -36,11 +36,13 @@ func (t courseworkTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVaria
 	case theme.ColorNameError:
 		return color.NRGBA{R: 220, G: 90, B: 82, A: 255}
 	case theme.ColorNameForegroundOnError:
-		return color.NRGBA{R: 255, G: 245, B: 245, A: 255}
+		return color.NRGBA{R: 0, G: 0, B: 0, A: 255}
 	case theme.ColorNameSuccess:
 		return color.NRGBA{R: 122, G: 201, B: 106, A: 255}
 	case theme.ColorNameForegroundOnSuccess:
-		return color.NRGBA{R: 16, G: 24, B: 18, A: 255}
+		return color.NRGBA{R: 0, G: 0, B: 0, A: 255}
+	case theme.ColorNameForegroundOnWarning:
+		return color.NRGBA{R: 0, G: 0, B: 0, A: 255}
 	case theme.ColorNameHeaderBackground:
 		return color.NRGBA{R: 29, G: 34, B: 39, A: 255}
 	}

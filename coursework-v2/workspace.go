@@ -73,6 +73,7 @@ func showWorkspace(myApp fyne.App, db *gorm.DB, user *models.User) {
 	})
 	addButton.Importance = widget.HighImportance
 	refreshButton := widget.NewButtonWithIcon("Обновить", theme.ViewRefreshIcon(), refresh)
+	refreshButton.Importance = widget.HighImportance
 	clearButton := widget.NewButton("Сбросить", func() {
 		search.SetText("")
 		status.SetSelected("Все статусы")
@@ -80,6 +81,9 @@ func showWorkspace(myApp fyne.App, db *gorm.DB, user *models.User) {
 		sortSelect.SetSelected("Название: А-Я")
 		refresh()
 	})
+	clearButton.Importance = widget.HighImportance
+	logoutButton := widget.NewButton("Выйти из учётной записи", func() { window.Close() })
+	logoutButton.Importance = widget.HighImportance
 
 	toolbar := container.NewBorder(nil, nil, nil, container.NewHBox(addButton, refreshButton), search)
 	filters := container.NewHBox(status, typeFilter, sortSelect, viewSelect, layout.NewSpacer(), clearButton)
@@ -92,7 +96,7 @@ func showWorkspace(myApp fyne.App, db *gorm.DB, user *models.User) {
 		widget.NewSeparator(),
 	)
 
-	window.SetContent(container.NewBorder(header, nil, nil, nil, scroll))
+	window.SetContent(container.NewBorder(header, logoutButton, nil, nil, scroll))
 	window.SetOnClosed(func() { showLogin(myApp, db) })
 	window.Show()
 	refresh()
@@ -153,8 +157,8 @@ func newRecordCard(window fyne.Window, myApp fyne.App, db *gorm.DB, user *models
 		widget.NewLabel(fmt.Sprintf("Действует до: %s", record.CertExpiryDate.Format("02.01.2006"))),
 		widget.NewLabelWithStyle(status, fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 		container.NewHBox(
-			widget.NewButtonWithIcon("Изменить", theme.DocumentCreateIcon(), func() { legacyui.ShowEditSziWindow(myApp, record, db) }),
-			widget.NewButtonWithIcon("Удалить", theme.DeleteIcon(), func() { confirmRecordDelete(window, db, user, record, refresh) }),
+			buttonWithImportance(widget.NewButtonWithIcon("Изменить", theme.DocumentCreateIcon(), func() { legacyui.ShowEditSziWindow(myApp, record, db) })),
+			buttonWithImportance(widget.NewButtonWithIcon("Удалить", theme.DeleteIcon(), func() { confirmRecordDelete(window, db, user, record, refresh) })),
 		),
 	)
 	return widget.NewCard(record.Name, meta, details)
@@ -162,8 +166,8 @@ func newRecordCard(window fyne.Window, myApp fyne.App, db *gorm.DB, user *models
 
 func newRecordRow(window fyne.Window, myApp fyne.App, db *gorm.DB, user *models.User, record models.SZIRecord, refresh func()) fyne.CanvasObject {
 	status := services.CalculateSziStatus(record.CertExpiryDate, time.Now())
-	edit := widget.NewButtonWithIcon("", theme.DocumentCreateIcon(), func() { legacyui.ShowEditSziWindow(myApp, record, db) })
-	delete := widget.NewButtonWithIcon("", theme.DeleteIcon(), func() { confirmRecordDelete(window, db, user, record, refresh) })
+	edit := buttonWithImportance(widget.NewButtonWithIcon("", theme.DocumentCreateIcon(), func() { legacyui.ShowEditSziWindow(myApp, record, db) }))
+	delete := buttonWithImportance(widget.NewButtonWithIcon("", theme.DeleteIcon(), func() { confirmRecordDelete(window, db, user, record, refresh) }))
 	return container.NewBorder(nil, widget.NewSeparator(), widget.NewLabelWithStyle(record.Name, fyne.TextAlignLeading, fyne.TextStyle{Bold: true}), container.NewHBox(widget.NewLabel(status), edit, delete), widget.NewLabel(fmt.Sprintf("%s · %s · до %s", record.Type, valueOrDash(record.Manufacturer), record.CertExpiryDate.Format("02.01.2006"))))
 }
 
@@ -173,7 +177,7 @@ func confirmRecordDelete(window fyne.Window, db *gorm.DB, user *models.User, rec
 			return
 		}
 		if err := services.DeleteSziRecord(db, user.ID, record.ID); err != nil {
-			appui.ShowErrorDialog(err.Error(), window.Canvas())
+			appui.ShowErrorDialog("Не удалось удалить запись СЗИ: "+err.Error(), window.Canvas())
 			return
 		}
 		refresh()
@@ -185,4 +189,9 @@ func valueOrDash(value string) string {
 		return "не указано"
 	}
 	return value
+}
+
+func buttonWithImportance(button *widget.Button) *widget.Button {
+	button.Importance = widget.HighImportance
+	return button
 }

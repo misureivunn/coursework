@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"fmt"
 	"szi-registry/models"
 	"szi-registry/services"
 	"time"
@@ -55,7 +56,11 @@ func ShowSuccessDialog(message string, canvas fyne.Canvas) {
 
 // ParseDate parses date string in format YYYY-MM-DD
 func ParseDate(dateStr string) (time.Time, error) {
-	return time.Parse("2006-01-02", dateStr)
+	parsed, err := time.Parse("2006-01-02", dateStr)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("некорректная дата «%s». Используйте формат ГГГГ-ММ-ДД, например 2026-09-14", dateStr)
+	}
+	return parsed, nil
 }
 
 // FormatDate formats date as YYYY-MM-DD

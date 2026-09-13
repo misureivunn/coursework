@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"fmt"
 	"szi-registry/models"
 	"szi-registry/services"
 	"szi-registry/utils/ui"
@@ -55,13 +56,13 @@ func ShowAddSziWindow(myApp fyne.App, userID uint, db *gorm.DB) {
 		OnSubmit: func() {
 			issueDate, err := ui.ParseDate(issueDateEntry.Text)
 			if err != nil {
-				dialog.ShowError(err, myWindow)
+				dialog.ShowError(fmt.Errorf("дата выдачи: %v", err), myWindow)
 				return
 			}
 
 			expiryDate, err := ui.ParseDate(expiryDateEntry.Text)
 			if err != nil {
-				dialog.ShowError(err, myWindow)
+				dialog.ShowError(fmt.Errorf("срок действия: %v", err), myWindow)
 				return
 			}
 
@@ -83,7 +84,7 @@ func ShowAddSziWindow(myApp fyne.App, userID uint, db *gorm.DB) {
 
 			err = services.AddSziRecord(db, newRecord)
 			if err != nil {
-				dialog.ShowError(err, myWindow)
+				dialog.ShowError(fmt.Errorf("не удалось добавить запись СЗИ: %v", err), myWindow)
 				return
 			}
 
@@ -107,8 +108,10 @@ func ShowAddSziWindow(myApp fyne.App, userID uint, db *gorm.DB) {
 	buttonContainer := container.NewHBox(
 		widget.NewButton("Назад", func() { myWindow.Close() }),
 	)
+	buttonContainer.Objects[0].(*widget.Button).Importance = widget.HighImportance
 	addButton := widget.NewButton("Добавить", func() { form.OnSubmit() })
-	addButton.Importance = widget.DangerImportance
+	addButton.Importance = widget.HighImportance
+	buttonContainer.Objects[0].(*widget.Button).Importance = widget.HighImportance
 	buttonContainer.Add(addButton)
 
 	content := container.NewBorder(

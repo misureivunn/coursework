@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"fmt"
 	"szi-registry/models"
 	"szi-registry/services"
 	"szi-registry/utils/ui"
@@ -67,13 +68,13 @@ func ShowEditSziWindow(myApp fyne.App, record models.SZIRecord, db *gorm.DB) {
 		OnSubmit: func() {
 			issueDate, err := ui.ParseDate(issueDateEntry.Text)
 			if err != nil {
-				dialog.ShowError(err, myWindow)
+				dialog.ShowError(fmt.Errorf("дата выдачи: %v", err), myWindow)
 				return
 			}
 
 			expiryDate, err := ui.ParseDate(expiryDateEntry.Text)
 			if err != nil {
-				dialog.ShowError(err, myWindow)
+				dialog.ShowError(fmt.Errorf("срок действия: %v", err), myWindow)
 				return
 			}
 
@@ -92,7 +93,7 @@ func ShowEditSziWindow(myApp fyne.App, record models.SZIRecord, db *gorm.DB) {
 
 			err = services.UpdateSziRecord(db, record.UserID, &record)
 			if err != nil {
-				dialog.ShowError(err, myWindow)
+				dialog.ShowError(fmt.Errorf("не удалось сохранить изменения: %v", err), myWindow)
 				return
 			}
 
@@ -115,8 +116,10 @@ func ShowEditSziWindow(myApp fyne.App, record models.SZIRecord, db *gorm.DB) {
 	buttonContainer := container.NewHBox(
 		widget.NewButton("Назад", func() { myWindow.Close() }),
 	)
+	buttonContainer.Objects[0].(*widget.Button).Importance = widget.HighImportance
 	saveButton := widget.NewButton("Сохранить", func() { form.OnSubmit() })
-	saveButton.Importance = widget.DangerImportance
+	saveButton.Importance = widget.HighImportance
+	buttonContainer.Objects[0].(*widget.Button).Importance = widget.HighImportance
 	buttonContainer.Add(saveButton)
 
 	content := container.NewBorder(

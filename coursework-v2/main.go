@@ -22,6 +22,9 @@ func main() {
 	defer dbManager.Close()
 
 	dbManager.DB.AutoMigrate(&models.User{}, &models.SZIRecord{}, &models.ReadNotification{}, &models.SZIAuditLog{})
+	if err := seedDemoRecordsForExistingUsers(dbManager.DB); err != nil {
+		fmt.Printf("Не удалось добавить демонстрационные записи: %v\n", err)
+	}
 
 	myApp := app.NewWithID("szi.registry.coursework.v2")
 	applyCourseworkTheme(myApp)

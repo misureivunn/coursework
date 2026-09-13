@@ -38,6 +38,10 @@ func showLogin(myApp fyne.App, db *gorm.DB) {
 			message.SetText("Вход не выполнен. Проверьте имя пользователя и пароль")
 			return
 		}
+		if err := seedDemoRecords(db, user.ID); err != nil {
+			dialog.ShowError(fmt.Errorf("не удалось подготовить демонстрационные записи: %v", err), window)
+			return
+		}
 		window.Close()
 		showWorkspace(myApp, db, user)
 	})
@@ -46,6 +50,7 @@ func showLogin(myApp fyne.App, db *gorm.DB) {
 	register := widget.NewButton("Создать аккаунт", func() {
 		showRegister(myApp, db, window)
 	})
+	register.Importance = widget.HighImportance
 
 	form := container.NewVBox(
 		container.NewCenter(title),
@@ -92,6 +97,8 @@ func showRegister(myApp fyne.App, db *gorm.DB, loginWindow fyne.Window) {
 		window.Close()
 		dialog.ShowInformation("Аккаунт создан", "Регистрация завершена. Введите данные в окне входа", loginWindow)
 	}
-	window.SetContent(container.NewBorder(nil, widget.NewButton("Закрыть", func() { window.Close() }), nil, nil, form))
+	closeButton := widget.NewButton("Закрыть", func() { window.Close() })
+	closeButton.Importance = widget.HighImportance
+	window.SetContent(container.NewBorder(nil, closeButton, nil, nil, form))
 	window.Show()
 }
