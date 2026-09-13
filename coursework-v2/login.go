@@ -29,9 +29,13 @@ func showLogin(myApp fyne.App, db *gorm.DB) {
 	title.TextStyle = fyne.TextStyle{Bold: true}
 
 	login := widget.NewButton("Войти", func() {
+		if username.Text == "" || password.Text == "" {
+			message.SetText("Введите имя пользователя и пароль")
+			return
+		}
 		user, err := services.AuthenticateUser(db, username.Text, password.Text)
 		if err != nil {
-			message.SetText("Проверьте имя пользователя и пароль")
+			message.SetText("Вход не выполнен. Проверьте имя пользователя и пароль")
 			return
 		}
 		window.Close()
@@ -73,16 +77,20 @@ func showRegister(myApp fyne.App, db *gorm.DB, loginWindow fyne.Window) {
 		widget.NewFormItem("Повтор", confirm),
 	)
 	form.OnSubmit = func() {
+		if username.Text == "" || password.Text == "" || confirm.Text == "" {
+			dialog.ShowError(fmt.Errorf("Заполните логин, пароль и подтверждение пароля"), window)
+			return
+		}
 		if password.Text != confirm.Text {
-			dialog.ShowError(fmt.Errorf("пароли не совпадают"), window)
+			dialog.ShowError(fmt.Errorf("Пароли не совпадают. Повторите ввод"), window)
 			return
 		}
 		if _, err := services.CreateUser(db, username.Text, password.Text); err != nil {
-			dialog.ShowError(err, window)
+			dialog.ShowError(fmt.Errorf("Не удалось создать аккаунт: %v", err), window)
 			return
 		}
 		window.Close()
-		dialog.ShowInformation("Готово", "Аккаунт создан", loginWindow)
+		dialog.ShowInformation("Аккаунт создан", "Регистрация завершена. Введите данные в окне входа", loginWindow)
 	}
 	window.SetContent(container.NewBorder(nil, widget.NewButton("Закрыть", func() { window.Close() }), nil, nil, form))
 	window.Show()
