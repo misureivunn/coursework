@@ -22,4 +22,17 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO :"app_use
 GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA public TO :"app_user";
 ALTER DEFAULT PRIVILEGES FOR ROLE :"admin_user" IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO :"app_user";
 ALTER DEFAULT PRIVILEGES FOR ROLE :"admin_user" IN SCHEMA public GRANT USAGE, SELECT, UPDATE ON SEQUENCES TO :"app_user";
+
+DO $$
+DECLARE
+    object_name text;
+BEGIN
+    FOR object_name IN SELECT tablename FROM pg_tables WHERE schemaname = 'public' LOOP
+        EXECUTE format('ALTER TABLE public.%I OWNER TO %I', object_name, :'app_user');
+    END LOOP;
+    FOR object_name IN SELECT sequence_name FROM information_schema.sequences WHERE sequence_schema = 'public' LOOP
+        EXECUTE format('ALTER SEQUENCE public.%I OWNER TO %I', object_name, :'app_user');
+    END LOOP;
+END
+$$;
 SQL

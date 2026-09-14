@@ -31,7 +31,7 @@ type SZIRecord struct {
 	SZIType             string    `json:"szi_type_reference,omitempty" gorm:"column:szi_type_reference;size:100;index:idx_szi_type_reference"`
 	ProtectionClass     string    `json:"protection_class,omitempty" gorm:"column:protection_class;size:10;index:idx_szi_protection_class"`
 	TrustLevel          string    `json:"trust_level,omitempty" gorm:"column:trust_level;size:10;index:idx_szi_trust_level"`
-	ACClass             string    `json:"ac_class,omitempty" gorm:"column:ac_class;size:10;index:idx_szi_ac_class"`
+	ACClass             string    `json:"ac_class,omitempty" gorm:"column:ac_class;size:32;index:idx_szi_ac_class"`
 	Vendor              string    `json:"vendor,omitempty" gorm:"column:vendor;size:255;index:idx_szi_vendor"`
 	Version             string    `json:"version,omitempty" gorm:"column:version;size:100"`
 	CertificateNumber   string    `json:"certificate_number,omitempty" gorm:"column:certificate_number;size:100;index:idx_szi_certificate_number"`

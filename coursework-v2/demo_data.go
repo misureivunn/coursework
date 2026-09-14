@@ -163,10 +163,12 @@ func seedDemoRecords(db *gorm.DB, userID uint) error {
 
 	for index := range records {
 		var existing models.SZIRecord
-		if err := db.Where("user_id = ? AND name = ?", userID, records[index].Name).First(&existing).Error; err == nil {
+		result := db.Where("user_id = ? AND name = ?", userID, records[index].Name).Limit(1).Find(&existing)
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected > 0 {
 			continue
-		} else if err != gorm.ErrRecordNotFound {
-			return err
 		}
 		if err := services.CreateSziRecord(db, &records[index]); err != nil {
 			return err
