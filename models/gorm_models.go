@@ -17,6 +17,7 @@ type SZIRecord struct {
 	Location        string    `json:"location" gorm:"size:255;not null"`
 	Status          string    `json:"status" gorm:"size:20;not null;default:Актуально;index:idx_szi_status"`
 	UserID          uint      `json:"user_id" gorm:"column:user_id;not null;index:idx_szi_user,priority:1"`
+	OwnerID         uint      `json:"-" gorm:"column:owner_id;index:idx_szi_owner"`
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`
 	Manufacturer    string    `json:"manufacturer,omitempty" gorm:"size:255"`
@@ -25,6 +26,20 @@ type SZIRecord struct {
 	Purpose         string    `json:"purpose,omitempty" gorm:"column:purpose;size:50;index:idx_szi_purpose"`
 	DeploymentType  string    `json:"deployment_type,omitempty" gorm:"column:deployment_type;size:50;index:idx_szi_deploy"`
 	ClassProtection string    `json:"class_protection,omitempty" gorm:"column:class_protection;size:10;index:idx_szi_class"`
+
+	// Поля реестра ФСТЭК, используемые новой версией интерфейса.
+	SZIType             string    `json:"szi_type_reference,omitempty" gorm:"column:szi_type_reference;size:100;index:idx_szi_type_reference"`
+	ProtectionClass     string    `json:"protection_class,omitempty" gorm:"column:protection_class;size:10;index:idx_szi_protection_class"`
+	TrustLevel          string    `json:"trust_level,omitempty" gorm:"column:trust_level;size:10;index:idx_szi_trust_level"`
+	ACClass             string    `json:"ac_class,omitempty" gorm:"column:ac_class;size:10;index:idx_szi_ac_class"`
+	Vendor              string    `json:"vendor,omitempty" gorm:"column:vendor;size:255;index:idx_szi_vendor"`
+	Version             string    `json:"version,omitempty" gorm:"column:version;size:100"`
+	CertificateNumber   string    `json:"certificate_number,omitempty" gorm:"column:certificate_number;size:100;index:idx_szi_certificate_number"`
+	CertificationScheme string    `json:"certification_scheme,omitempty" gorm:"column:certification_scheme;size:50"`
+	IssueDate           time.Time `json:"issue_date,omitempty" gorm:"column:issue_date"`
+	ExpiryDate          time.Time `json:"expiry_date,omitempty" gorm:"column:expiry_date;index:idx_szi_expiry_date_reference"`
+	InstallLocation     string    `json:"install_location,omitempty" gorm:"column:install_location;size:255"`
+	ResponsiblePerson   string    `json:"responsible_person,omitempty" gorm:"column:responsible_person;size:255"`
 
 	// Связь с пользователем
 	User User `json:"user,omitempty" gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE"`
