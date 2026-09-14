@@ -30,3 +30,8 @@ vendor/
 
 # Docker
 .dockerignore
+
+# Local secrets
+.env
+.env.*
+!.env.example

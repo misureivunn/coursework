@@ -4,12 +4,15 @@ services:
     container_name: szi-postgres-v2
     environment:
       POSTGRES_DB: szi_registry
-      POSTGRES_USER: szi_user
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-local-dev-password}
+      POSTGRES_USER: ${POSTGRES_ADMIN_USER:?POSTGRES_ADMIN_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD:?POSTGRES_ADMIN_PASSWORD is required}
+      APP_DB_USER: ${DB_USER:-szi_app}
+      APP_DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
     ports:
       - "5434:5432"
     volumes:
       - coursework_v2_pg_data:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
 
 volumes:
   coursework_v2_pg_data:

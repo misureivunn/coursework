@@ -16,7 +16,7 @@ func main() {
 	if err != nil {
 		fmt.Printf("Ошибка подключения к базе данных: %v\n", err)
 		fmt.Println("Запустите coursework-v2 PostgreSQL и задайте DB_PASSWORD и DB_PORT=5434 перед запуском, например:")
-		fmt.Println("DB_PASSWORD=local-dev-password DB_PORT=5434 go run ./coursework-v2")
+		fmt.Println("Задайте DB_PASSWORD и DB_PORT в локальном окружении и повторите запуск")
 		return
 	}
 	defer dbManager.Close()

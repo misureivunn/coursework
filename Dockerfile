@@ -57,7 +57,6 @@ USER szi
 ENV DB_HOST=postgres-szi \
     DB_PORT=5432 \
     DB_USER=szi_user \
-    DB_PASSWORD=MyV3ryS3cur3P@ss2026! \
     DB_NAME=szi_registry
 
 # Для GUI-приложений нужен DISPLAY (при запуске с X11 forwarding)

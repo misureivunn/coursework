@@ -7,7 +7,7 @@ services:
     restart: always
     environment:
       - POSTGRES_USER=music_lover
-      - POSTGRES_PASSWORD=music
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
       - POSTGRES_DB=mymusic_db
     ports:
       - "5432:5432"
@@ -26,7 +26,7 @@ services:
       - DB_HOST=db
       - DB_PORT=5432
       - DB_USER=music_lover
-      - DB_PASSWORD=music
+      - DB_PASSWORD=${DB_PASSWORD:?DB_PASSWORD is required}
       - DB_NAME=mymusic_db
       - DISPLAY=${DISPLAY} # Нужно для вывода графики на Linux
     volumes:

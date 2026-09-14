@@ -86,6 +86,10 @@ func showWorkspace(myApp fyne.App, db *gorm.DB, user *models.User) {
 	addButton.Importance = widget.HighImportance
 	refreshButton := widget.NewButtonWithIcon("Обновить", theme.ViewRefreshIcon(), refresh)
 	refreshButton.Importance = widget.HighImportance
+	exportButton := widget.NewButton("Экспорт CSV", func() { exportRecords(window, records) })
+	exportButton.Importance = widget.HighImportance
+	statisticsButton := widget.NewButton("Статистика", func() { showStatistics(myApp, db, user.ID) })
+	statisticsButton.Importance = widget.HighImportance
 	clearButton := widget.NewButton("Сбросить", func() {
 		search.SetText("")
 		status.SetSelected("Все статусы")
@@ -101,14 +105,13 @@ func showWorkspace(myApp fyne.App, db *gorm.DB, user *models.User) {
 	logoutButton := widget.NewButton("Выйти из учётной записи", func() { window.Close() })
 	logoutButton.Importance = widget.HighImportance
 
-	toolbar := container.NewBorder(nil, nil, nil, container.NewHBox(addButton, refreshButton), search)
+	toolbar := container.NewBorder(nil, nil, nil, container.NewHBox(addButton, refreshButton, exportButton, statisticsButton), search)
 	filters := container.NewVBox(
 		container.NewHBox(status, typeFilter, protectionFilter, trustFilter),
 		container.NewHBox(acFilter, schemeFilter, sortSelect, viewSelect, layout.NewSpacer(), clearButton),
 	)
 	header := container.NewVBox(
 		widget.NewLabelWithStyle("Рабочее пространство", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-		widget.NewLabel("Управляйте реестром без лишних переходов"),
 		toolbar,
 		filters,
 		resultLabel,

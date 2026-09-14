@@ -13,11 +13,11 @@
 1. Убедитесь, что Docker и Go установлены
 2. Запустите базу данных:
    ```bash
-   docker-compose up -d
+  POSTGRES_PASSWORD='локальный-пароль' docker-compose up -d
    ```
 3. Запустите приложение:
    ```bash
-   go run main.go
+  DB_PASSWORD='локальный-пароль' go run main.go
    ```
 
 ## Функциональные возможности
