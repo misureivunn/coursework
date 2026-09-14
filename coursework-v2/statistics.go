@@ -6,21 +6,20 @@ import (
 	"strings"
 	"time"
 
-	"szi-registry/models"
-	"szi-registry/services"
+	"szi-registry/coursework-v2/internal/application"
+	"szi-registry/coursework-v2/internal/domain"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
-	"gorm.io/gorm"
 )
 
-func showStatistics(myApp fyne.App, db *gorm.DB, userID uint) {
+func showStatistics(myApp fyne.App, app application.App, userID uint) {
 	window := myApp.NewWindow("Статистика реестра")
 	window.Resize(fyne.NewSize(620, 620))
-	var records []models.SZIRecord
-	if err := db.Where("user_id = ?", userID).Find(&records).Error; err != nil {
+	records, err := app.Records(userID)
+	if err != nil {
 		dialog.ShowError(fmt.Errorf("не удалось загрузить статистику: %v", err), window)
 		return
 	}
@@ -30,12 +29,12 @@ func showStatistics(myApp fyne.App, db *gorm.DB, userID uint) {
 	classCounts := map[string]int{}
 	trustCounts := map[string]int{}
 	for _, record := range records {
-		statusCounts[services.CalculateSziStatus(referenceExpiryDate(record), time.Now())]++
-		if referenceType(record) != "" {
-			typeCounts[referenceType(record)]++
+		statusCounts[domain.StatusFor(record.ExpiryDate, time.Now())]++
+		if record.SZIType != "" {
+			typeCounts[record.SZIType]++
 		}
-		if referenceProtectionClass(record) != "" {
-			classCounts[referenceProtectionClass(record)]++
+		if record.ProtectionClass != "" {
+			classCounts[record.ProtectionClass]++
 		}
 		if record.TrustLevel != "" {
 			trustCounts[record.TrustLevel]++
@@ -43,7 +42,7 @@ func showStatistics(myApp fyne.App, db *gorm.DB, userID uint) {
 	}
 	content := container.NewVBox(
 		widget.NewLabelWithStyle(fmt.Sprintf("Всего записей: %d", len(records)), fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-		widget.NewLabel(fmt.Sprintf("Актуально: %d · Требует внимания: %d · Просрочено: %d", statusCounts[services.StatusCurrent], statusCounts[services.StatusAttention], statusCounts[services.StatusExpired])),
+		widget.NewLabel(fmt.Sprintf("Актуально: %d · Требует внимания: %d · Просрочено: %d", statusCounts[domain.StatusCurrent], statusCounts[domain.StatusAttention], statusCounts[domain.StatusExpired])),
 		widget.NewSeparator(),
 		statSection("Типы СЗИ", typeCounts),
 		statSection("Классы СВТ", classCounts),
@@ -66,12 +65,3 @@ func statSection(title string, values map[string]int) fyne.CanvasObject {
 	}
 	return container.NewVBox(widget.NewLabelWithStyle(title, fyne.TextAlignLeading, fyne.TextStyle{Bold: true}), widget.NewLabel(strings.Join(rows, "\n")))
 }
-
-func referenceIssueDate(record models.SZIRecord) time.Time {
-	if !record.IssueDate.IsZero() {
-		return record.IssueDate
-	}
-	return record.CertIssueDate
-}
-
-func now() time.Time { return time.Now() }

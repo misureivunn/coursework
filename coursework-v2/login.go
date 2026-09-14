@@ -4,17 +4,16 @@ import (
 	"fmt"
 	"image/color"
 
-	"szi-registry/services"
+	"szi-registry/coursework-v2/internal/application"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
-	"gorm.io/gorm"
 )
 
-func showLogin(myApp fyne.App, db *gorm.DB) {
+func showLogin(myApp fyne.App, app application.App) {
 	window := myApp.NewWindow("Реестр СЗИ")
 	window.Resize(fyne.NewSize(460, 390))
 
@@ -33,18 +32,18 @@ func showLogin(myApp fyne.App, db *gorm.DB) {
 			message.SetText("Введите имя пользователя и пароль")
 			return
 		}
-		user, err := services.AuthenticateUser(db, username.Text, password.Text)
+		user, err := app.Login(username.Text, password.Text)
 		if err != nil {
 			message.SetText("Вход не выполнен. Проверьте имя пользователя и пароль")
 			return
 		}
 		window.Close()
-		showWorkspace(myApp, db, user)
+		showWorkspace(myApp, app, user)
 	})
 	login.Importance = widget.HighImportance
 
 	register := widget.NewButton("Создать аккаунт", func() {
-		showRegister(myApp, db, window)
+		showRegister(myApp, app, window)
 	})
 	register.Importance = widget.HighImportance
 
@@ -62,7 +61,7 @@ func showLogin(myApp fyne.App, db *gorm.DB) {
 	window.Show()
 }
 
-func showRegister(myApp fyne.App, db *gorm.DB, loginWindow fyne.Window) {
+func showRegister(myApp fyne.App, app application.App, loginWindow fyne.Window) {
 	window := myApp.NewWindow("Новый пользователь")
 	window.Resize(fyne.NewSize(420, 300))
 	username := widget.NewEntry()
@@ -86,7 +85,7 @@ func showRegister(myApp fyne.App, db *gorm.DB, loginWindow fyne.Window) {
 			dialog.ShowError(fmt.Errorf("Пароли не совпадают. Повторите ввод"), window)
 			return
 		}
-		if _, err := services.CreateUser(db, username.Text, password.Text); err != nil {
+		if err := app.Register(username.Text, password.Text); err != nil {
 			dialog.ShowError(fmt.Errorf("Не удалось создать аккаунт: %v", err), window)
 			return
 		}

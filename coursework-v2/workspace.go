@@ -6,9 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"szi-registry/models"
-	"szi-registry/services"
-	appui "szi-registry/utils/ui"
+	"szi-registry/coursework-v2/internal/application"
+	"szi-registry/coursework-v2/internal/domain"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -16,79 +15,63 @@ import (
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
-	"gorm.io/gorm"
 )
 
-func showWorkspace(myApp fyne.App, db *gorm.DB, user *models.User) {
+func showWorkspace(myApp fyne.App, app application.App, user domain.User) {
 	window := myApp.NewWindow("Реестр СЗИ | Рабочее пространство")
 	window.Resize(fyne.NewSize(1100, 760))
-
 	search := widget.NewEntry()
 	search.SetPlaceHolder("Поиск по названию, сертификату, разработчику или месту...")
-	status := widget.NewSelect([]string{"Все статусы", services.StatusCurrent, services.StatusAttention, services.StatusExpired}, nil)
+	status := widget.NewSelect([]string{"Все статусы", domain.StatusCurrent, domain.StatusAttention, domain.StatusExpired}, nil)
 	status.SetSelected("Все статусы")
-	typeFilter := widget.NewSelect(append([]string{"Все типы"}, models.SZITypeValues...), nil)
+	typeFilter := widget.NewSelect(append([]string{"Все типы"}, domain.SZITypeValues...), nil)
 	typeFilter.SetSelected("Все типы")
-	protectionFilter := widget.NewSelect(append([]string{"Все классы СВТ"}, models.ProtectionClassValues...), nil)
+	protectionFilter := widget.NewSelect(append([]string{"Все классы СВТ"}, domain.ProtectionClassValues...), nil)
 	protectionFilter.SetSelected("Все классы СВТ")
-	trustFilter := widget.NewSelect(append([]string{"Все уровни доверия"}, models.TrustLevelValues...), nil)
+	trustFilter := widget.NewSelect(append([]string{"Все уровни доверия"}, domain.TrustLevelValues...), nil)
 	trustFilter.SetSelected("Все уровни доверия")
-	acFilter := widget.NewSelect(append([]string{"Все классы АС"}, models.ACClassValues...), nil)
+	acFilter := widget.NewSelect(append([]string{"Все классы АС"}, domain.ACClassValues...), nil)
 	acFilter.SetSelected("Все классы АС")
-	schemeFilter := widget.NewSelect(append([]string{"Все схемы"}, models.CertificationSchemeValues...), nil)
+	schemeFilter := widget.NewSelect(append([]string{"Все схемы"}, domain.CertificationSchemeValues...), nil)
 	schemeFilter.SetSelected("Все схемы")
 	sortSelect := widget.NewSelect([]string{"Название: А-Я", "Срок действия", "Статус"}, nil)
 	sortSelect.SetSelected("Название: А-Я")
 	viewSelect := widget.NewSelect([]string{"Карточки", "Список"}, nil)
 	viewSelect.SetSelected("Карточки")
-
 	resultLabel := widget.NewLabel("")
 	resultLabel.TextStyle = fyne.TextStyle{Bold: true}
 	recordsView := container.NewVBox()
 	scroll := container.NewVScroll(recordsView)
-
-	var records []models.SZIRecord
+	var records []domain.SZIRecord
 	var refresh func()
 	refresh = func() {
-		loaded, err := services.GetUserRecords(db, user.ID)
+		loaded, err := app.Records(user.ID)
 		if err != nil {
-			appui.ShowErrorDialog("Не удалось загрузить записи: "+err.Error(), window.Canvas())
+			showAppError("Не удалось загрузить записи", window)
 			return
 		}
 		records = loaded
-		renderRecords(window, myApp, db, user, records, search.Text, status.Selected, typeFilter.Selected, protectionFilter.Selected, trustFilter.Selected, acFilter.Selected, schemeFilter.Selected, sortSelect.Selected, viewSelect.Selected, recordsView, resultLabel, refresh)
+		renderRecords(window, myApp, app, user, records, search.Text, status.Selected, typeFilter.Selected, protectionFilter.Selected, trustFilter.Selected, acFilter.Selected, schemeFilter.Selected, sortSelect.Selected, viewSelect.Selected, recordsView, resultLabel, refresh)
 	}
-
-	search.OnChanged = func(string) {
-		renderRecords(window, myApp, db, user, records, search.Text, status.Selected, typeFilter.Selected, protectionFilter.Selected, trustFilter.Selected, acFilter.Selected, schemeFilter.Selected, sortSelect.Selected, viewSelect.Selected, recordsView, resultLabel, refresh)
+	onFilter := func(string) {
+		renderRecords(window, myApp, app, user, records, search.Text, status.Selected, typeFilter.Selected, protectionFilter.Selected, trustFilter.Selected, acFilter.Selected, schemeFilter.Selected, sortSelect.Selected, viewSelect.Selected, recordsView, resultLabel, refresh)
 	}
-	status.OnChanged = func(string) {
-		renderRecords(window, myApp, db, user, records, search.Text, status.Selected, typeFilter.Selected, protectionFilter.Selected, trustFilter.Selected, acFilter.Selected, schemeFilter.Selected, sortSelect.Selected, viewSelect.Selected, recordsView, resultLabel, refresh)
-	}
-	typeFilter.OnChanged = func(string) {
-		renderRecords(window, myApp, db, user, records, search.Text, status.Selected, typeFilter.Selected, protectionFilter.Selected, trustFilter.Selected, acFilter.Selected, schemeFilter.Selected, sortSelect.Selected, viewSelect.Selected, recordsView, resultLabel, refresh)
-	}
-	sortSelect.OnChanged = func(string) {
-		renderRecords(window, myApp, db, user, records, search.Text, status.Selected, typeFilter.Selected, protectionFilter.Selected, trustFilter.Selected, acFilter.Selected, schemeFilter.Selected, sortSelect.Selected, viewSelect.Selected, recordsView, resultLabel, refresh)
-	}
-	viewSelect.OnChanged = func(string) {
-		renderRecords(window, myApp, db, user, records, search.Text, status.Selected, typeFilter.Selected, protectionFilter.Selected, trustFilter.Selected, acFilter.Selected, schemeFilter.Selected, sortSelect.Selected, viewSelect.Selected, recordsView, resultLabel, refresh)
-	}
-	for _, filter := range []*widget.Select{protectionFilter, trustFilter, acFilter, schemeFilter} {
-		filter.OnChanged = func(string) {
-			renderRecords(window, myApp, db, user, records, search.Text, status.Selected, typeFilter.Selected, protectionFilter.Selected, trustFilter.Selected, acFilter.Selected, schemeFilter.Selected, sortSelect.Selected, viewSelect.Selected, recordsView, resultLabel, refresh)
-		}
-	}
-
-	addButton := widget.NewButtonWithIcon("Добавить СЗИ", theme.ContentAddIcon(), func() {
-		showRecordForm(myApp, db, user.ID, nil, refresh)
-	})
+	search.OnChanged = onFilter
+	status.OnChanged = onFilter
+	typeFilter.OnChanged = onFilter
+	protectionFilter.OnChanged = onFilter
+	trustFilter.OnChanged = onFilter
+	acFilter.OnChanged = onFilter
+	schemeFilter.OnChanged = onFilter
+	sortSelect.OnChanged = onFilter
+	viewSelect.OnChanged = onFilter
+	addButton := widget.NewButtonWithIcon("Добавить СЗИ", theme.ContentAddIcon(), func() { showRecordForm(myApp, app, user.ID, nil, refresh) })
 	addButton.Importance = widget.HighImportance
 	refreshButton := widget.NewButtonWithIcon("Обновить", theme.ViewRefreshIcon(), refresh)
 	refreshButton.Importance = widget.HighImportance
 	exportButton := widget.NewButton("Экспорт CSV", func() { exportRecords(window, records) })
 	exportButton.Importance = widget.HighImportance
-	statisticsButton := widget.NewButton("Статистика", func() { showStatistics(myApp, db, user.ID) })
+	statisticsButton := widget.NewButton("Статистика", func() { showStatistics(myApp, app, user.ID) })
 	statisticsButton.Importance = widget.HighImportance
 	clearButton := widget.NewButton("Сбросить", func() {
 		search.SetText("")
@@ -102,145 +85,105 @@ func showWorkspace(myApp fyne.App, db *gorm.DB, user *models.User) {
 		refresh()
 	})
 	clearButton.Importance = widget.HighImportance
-	logoutButton := widget.NewButton("Выйти из учётной записи", func() { window.Close() })
+	logoutButton := widget.NewButton("Выйти из учётной записи", window.Close)
 	logoutButton.Importance = widget.HighImportance
-
 	toolbar := container.NewBorder(nil, nil, nil, container.NewHBox(addButton, refreshButton, exportButton, statisticsButton), search)
-	filters := container.NewVBox(
-		container.NewHBox(status, typeFilter, protectionFilter, trustFilter),
-		container.NewHBox(acFilter, schemeFilter, sortSelect, viewSelect, layout.NewSpacer(), clearButton),
-	)
-	header := container.NewVBox(
-		widget.NewLabelWithStyle("Рабочее пространство", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-		toolbar,
-		filters,
-		resultLabel,
-		widget.NewSeparator(),
-	)
-
+	filters := container.NewVBox(container.NewHBox(status, typeFilter, protectionFilter, trustFilter), container.NewHBox(acFilter, schemeFilter, sortSelect, viewSelect, layout.NewSpacer(), clearButton))
+	header := container.NewVBox(widget.NewLabelWithStyle("Рабочее пространство", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}), toolbar, filters, resultLabel, widget.NewSeparator())
 	window.SetContent(container.NewBorder(header, logoutButton, nil, nil, scroll))
-	window.SetOnClosed(func() { showLogin(myApp, db) })
+	window.SetOnClosed(func() { showLogin(myApp, app) })
 	window.Show()
 	refresh()
 }
 
-func renderRecords(window fyne.Window, myApp fyne.App, db *gorm.DB, user *models.User, records []models.SZIRecord, query, statusFilter, typeFilter, protectionFilter, trustFilter, acFilter, schemeFilter, sortMode, viewMode string, target *fyne.Container, resultLabel *widget.Label, refresh func()) {
-	filtered := make([]models.SZIRecord, 0, len(records))
+func renderRecords(window fyne.Window, myApp fyne.App, app application.App, user domain.User, records []domain.SZIRecord, query, statusFilter, typeFilter, protectionFilter, trustFilter, acFilter, schemeFilter, sortMode, viewMode string, target *fyne.Container, resultLabel *widget.Label, refresh func()) {
+	filtered := make([]domain.SZIRecord, 0, len(records))
 	query = strings.ToLower(strings.TrimSpace(query))
 	for _, record := range records {
-		currentStatus := services.CalculateSziStatus(record.CertExpiryDate, time.Now())
-		searchText := strings.ToLower(strings.Join([]string{record.Name, referenceCertificate(record), referenceVendor(record), referenceLocation(record), referenceType(record), record.ResponsiblePerson}, " "))
-		if query != "" && !strings.Contains(searchText, query) {
+		text := strings.ToLower(strings.Join([]string{record.Name, record.CertificateNumber, record.Vendor, record.InstallLocation, record.SZIType, record.ResponsiblePerson}, " "))
+		if query != "" && !strings.Contains(text, query) {
 			continue
 		}
-		if statusFilter != "" && statusFilter != "Все статусы" && currentStatus != statusFilter {
+		if statusFilter != "Все статусы" && app.Status(record.ExpiryDate) != statusFilter {
 			continue
 		}
-		if typeFilter != "" && typeFilter != "Все типы" && referenceType(record) != typeFilter {
+		if typeFilter != "Все типы" && record.SZIType != typeFilter {
 			continue
 		}
-		if protectionFilter != "" && protectionFilter != "Все классы СВТ" && referenceProtectionClass(record) != protectionFilter {
+		if protectionFilter != "Все классы СВТ" && record.ProtectionClass != protectionFilter {
 			continue
 		}
-		if trustFilter != "" && trustFilter != "Все уровни доверия" && record.TrustLevel != trustFilter {
+		if trustFilter != "Все уровни доверия" && record.TrustLevel != trustFilter {
 			continue
 		}
-		if acFilter != "" && acFilter != "Все классы АС" && record.ACClass != acFilter {
+		if acFilter != "Все классы АС" && record.ACClass != acFilter {
 			continue
 		}
-		if schemeFilter != "" && schemeFilter != "Все схемы" && record.CertificationScheme != schemeFilter {
+		if schemeFilter != "Все схемы" && record.CertificationScheme != schemeFilter {
 			continue
 		}
 		filtered = append(filtered, record)
 	}
-
 	sort.SliceStable(filtered, func(i, j int) bool {
-		switch sortMode {
-		case "Срок действия":
-			return filtered[i].CertExpiryDate.Before(filtered[j].CertExpiryDate)
-		case "Статус":
-			return services.CalculateSziStatus(filtered[i].CertExpiryDate, time.Now()) < services.CalculateSziStatus(filtered[j].CertExpiryDate, time.Now())
-		default:
-			return strings.ToLower(filtered[i].Name) < strings.ToLower(filtered[j].Name)
+		if sortMode == "Срок действия" {
+			return filtered[i].ExpiryDate.Before(filtered[j].ExpiryDate)
 		}
+		if sortMode == "Статус" {
+			return app.Status(filtered[i].ExpiryDate) < app.Status(filtered[j].ExpiryDate)
+		}
+		return strings.ToLower(filtered[i].Name) < strings.ToLower(filtered[j].Name)
 	})
-
 	resultLabel.SetText(fmt.Sprintf("Показано записей: %d из %d", len(filtered), len(records)))
 	target.Objects = nil
+	for _, record := range filtered {
+		if viewMode == "Список" {
+			target.Add(recordRow(window, myApp, app, user, record, refresh))
+		} else {
+			target.Add(recordCard(window, myApp, app, user, record, refresh))
+		}
+	}
 	if len(filtered) == 0 {
 		target.Add(widget.NewLabel("По выбранным условиям записи не найдены"))
-	} else {
-		for _, record := range filtered {
-			if viewMode == "Список" {
-				target.Add(newRecordRow(window, myApp, db, user, record, refresh))
-			} else {
-				target.Add(newRecordCard(window, myApp, db, user, record, refresh))
-			}
-		}
 	}
 	target.Refresh()
 }
 
-func newRecordCard(window fyne.Window, myApp fyne.App, db *gorm.DB, user *models.User, record models.SZIRecord, refresh func()) fyne.CanvasObject {
-	status := services.CalculateSziStatus(record.CertExpiryDate, time.Now())
-	meta := fmt.Sprintf("%s  ·  Сертификат %s", referenceType(record), referenceCertificate(record))
-	details := container.NewVBox(
-		widget.NewLabel(meta),
-		widget.NewLabel(fmt.Sprintf("Разработчик / заявитель: %s", valueOrDash(referenceVendor(record)))),
-		widget.NewLabel(fmt.Sprintf("Класс СВТ: %s · Уровень доверия: %s · Класс АС: %s", valueOrDash(referenceProtectionClass(record)), valueOrDash(record.TrustLevel), valueOrDash(record.ACClass))),
-		widget.NewLabel(fmt.Sprintf("Установка: %s · Ответственный: %s", valueOrDash(referenceLocation(record)), valueOrDash(record.ResponsiblePerson))),
-		widget.NewLabel(fmt.Sprintf("Действует до: %s", referenceExpiryDate(record).Format("02.01.2006"))),
-		widget.NewLabelWithStyle(status, fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-		container.NewHBox(
-			buttonWithImportance(widget.NewButtonWithIcon("Изменить", theme.DocumentCreateIcon(), func() { showRecordForm(myApp, db, user.ID, &record, refresh) })),
-			buttonWithImportance(widget.NewButtonWithIcon("Удалить", theme.DeleteIcon(), func() { confirmRecordDelete(window, db, user, record, refresh) })),
-		),
+func recordCard(window fyne.Window, myApp fyne.App, app application.App, user domain.User, record domain.SZIRecord, refresh func()) fyne.CanvasObject {
+	status := app.Status(record.ExpiryDate)
+	actions := container.NewHBox(
+		widget.NewButton("Изменить", func() { showRecordForm(myApp, app, user.ID, &record, refresh) }),
+		widget.NewButton("Удалить", func() { confirmDelete(window, app, user.ID, record, refresh) }),
 	)
-	return widget.NewCard(record.Name, meta, details)
+	details := container.NewVBox(
+		widget.NewLabel(fmt.Sprintf("%s · Сертификат %s", record.SZIType, record.CertificateNumber)),
+		widget.NewLabel("Разработчик: "+record.Vendor),
+		widget.NewLabel(fmt.Sprintf("Класс СВТ: %s · Уровень доверия: %s · Класс АС: %s", valueOrDash(record.ProtectionClass), valueOrDash(record.TrustLevel), valueOrDash(record.ACClass))),
+		widget.NewLabel(fmt.Sprintf("Установка: %s · Ответственный: %s", valueOrDash(record.InstallLocation), valueOrDash(record.ResponsiblePerson))),
+		widget.NewLabel("Действует до: "+record.ExpiryDate.Format("02.01.2006")),
+		widget.NewLabelWithStyle(status, fyne.TextAlignLeading, fyne.TextStyle{Bold: true}), actions,
+	)
+	return widget.NewCard(record.Name, record.SZIType, details)
 }
 
-func newRecordRow(window fyne.Window, myApp fyne.App, db *gorm.DB, user *models.User, record models.SZIRecord, refresh func()) fyne.CanvasObject {
-	status := services.CalculateSziStatus(record.CertExpiryDate, time.Now())
-	edit := buttonWithImportance(widget.NewButtonWithIcon("", theme.DocumentCreateIcon(), func() { showRecordForm(myApp, db, user.ID, &record, refresh) }))
-	delete := buttonWithImportance(widget.NewButtonWithIcon("", theme.DeleteIcon(), func() { confirmRecordDelete(window, db, user, record, refresh) }))
-	return container.NewBorder(nil, widget.NewSeparator(), widget.NewLabelWithStyle(record.Name, fyne.TextAlignLeading, fyne.TextStyle{Bold: true}), container.NewHBox(widget.NewLabel(status), edit, delete), widget.NewLabel(fmt.Sprintf("%s · %s · до %s", referenceType(record), valueOrDash(referenceVendor(record)), referenceExpiryDate(record).Format("02.01.2006"))))
+func recordRow(window fyne.Window, myApp fyne.App, app application.App, user domain.User, record domain.SZIRecord, refresh func()) fyne.CanvasObject {
+	buttons := container.NewHBox(
+		widget.NewLabel(app.Status(record.ExpiryDate)),
+		widget.NewButtonWithIcon("", theme.DocumentCreateIcon(), func() { showRecordForm(myApp, app, user.ID, &record, refresh) }),
+		widget.NewButtonWithIcon("", theme.DeleteIcon(), func() { confirmDelete(window, app, user.ID, record, refresh) }),
+	)
+	return container.NewBorder(nil, widget.NewSeparator(), widget.NewLabelWithStyle(record.Name, fyne.TextAlignLeading, fyne.TextStyle{Bold: true}), buttons, widget.NewLabel(fmt.Sprintf("%s · %s · до %s", record.SZIType, record.Vendor, record.ExpiryDate.Format("02.01.2006"))))
 }
-
-func referenceType(record models.SZIRecord) string {
-	return valueOrFallback(record.SZIType, record.Type)
-}
-func referenceCertificate(record models.SZIRecord) string {
-	return valueOrFallback(record.CertificateNumber, record.CertNumber)
-}
-func referenceVendor(record models.SZIRecord) string {
-	return valueOrFallback(record.Vendor, record.Manufacturer)
-}
-func referenceLocation(record models.SZIRecord) string {
-	return valueOrFallback(record.InstallLocation, record.Location)
-}
-func referenceProtectionClass(record models.SZIRecord) string {
-	return valueOrFallback(record.ProtectionClass, record.ClassProtection)
-}
-func referenceExpiryDate(record models.SZIRecord) time.Time {
-	if !record.ExpiryDate.IsZero() {
-		return record.ExpiryDate
-	}
-	return record.CertExpiryDate
-}
-
-func confirmRecordDelete(window fyne.Window, db *gorm.DB, user *models.User, record models.SZIRecord, refresh func()) {
+func confirmDelete(window fyne.Window, app application.App, userID uint, record domain.SZIRecord, refresh func()) {
 	dialog.ShowConfirm("Удаление записи", "Удалить «"+record.Name+"»?", func(ok bool) {
-		if !ok {
-			return
+		if ok {
+			if err := app.Delete(userID, record.ID); err != nil {
+				showAppError(err.Error(), window)
+				return
+			}
+			refresh()
 		}
-		if err := services.DeleteSziRecord(db, user.ID, record.ID); err != nil {
-			appui.ShowErrorDialog("Не удалось удалить запись СЗИ: "+err.Error(), window.Canvas())
-			return
-		}
-		refresh()
 	}, window)
 }
-
 func valueOrDash(value string) string {
 	if strings.TrimSpace(value) == "" {
 		return "не указано"
@@ -248,7 +191,9 @@ func valueOrDash(value string) string {
 	return value
 }
 
-func buttonWithImportance(button *widget.Button) *widget.Button {
-	button.Importance = widget.HighImportance
-	return button
-}
+func referenceType(record domain.SZIRecord) string            { return record.SZIType }
+func referenceCertificate(record domain.SZIRecord) string     { return record.CertificateNumber }
+func referenceVendor(record domain.SZIRecord) string          { return record.Vendor }
+func referenceLocation(record domain.SZIRecord) string        { return record.InstallLocation }
+func referenceProtectionClass(record domain.SZIRecord) string { return record.ProtectionClass }
+func referenceExpiryDate(record domain.SZIRecord) time.Time   { return record.ExpiryDate }

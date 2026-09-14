@@ -3,31 +3,38 @@ package main
 import (
 	"fmt"
 
-	"szi-registry/config"
-	"szi-registry/models"
-	"szi-registry/repositories"
+	"szi-registry/coursework-v2/internal/application"
+	"szi-registry/coursework-v2/internal/config"
+	"szi-registry/coursework-v2/internal/storage"
 
 	"fyne.io/fyne/v2/app"
 )
 
 func main() {
-	cfg := config.LoadConfig()
-	dbManager, err := repositories.NewDBManagerWithConfig(cfg)
+	cfg := config.Load()
+	dsn, err := cfg.DSN()
 	if err != nil {
 		fmt.Printf("Ошибка подключения к базе данных: %v\n", err)
 		fmt.Println("Запустите coursework-v2 PostgreSQL и задайте DB_PASSWORD и DB_PORT=5434 перед запуском, например:")
 		fmt.Println("Задайте DB_PASSWORD и DB_PORT в локальном окружении и повторите запуск")
 		return
 	}
-	defer dbManager.Close()
+	db, err := storage.Open(dsn)
+	if err != nil {
+		fmt.Printf("Ошибка подключения к базе данных: %v\n", err)
+		return
+	}
 
-	dbManager.DB.AutoMigrate(&models.User{}, &models.SZIRecord{}, &models.ReadNotification{}, &models.SZIAuditLog{})
-	if err := normalizeLegacyReferenceFields(dbManager.DB); err != nil {
+	if err := storage.Migrate(db); err != nil {
+		fmt.Printf("Ошибка подготовки базы данных: %v\n", err)
+		return
+	}
+	if err := storage.NormalizeLegacyFields(db); err != nil {
 		fmt.Printf("Не удалось обновить поля реестра: %v\n", err)
 	}
 
 	myApp := app.NewWithID("szi.registry.coursework.v2")
 	applyCourseworkTheme(myApp)
-	showLogin(myApp, dbManager.DB)
+	showLogin(myApp, application.New(db))
 	myApp.Run()
 }

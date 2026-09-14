@@ -4,16 +4,16 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
+	"time"
 
-	"szi-registry/models"
-	"szi-registry/services"
+	"szi-registry/coursework-v2/internal/domain"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/storage"
 )
 
-func exportRecords(window fyne.Window, records []models.SZIRecord) {
+func exportRecords(window fyne.Window, records []domain.SZIRecord) {
 	if len(records) == 0 {
 		dialog.ShowInformation("Экспорт", "Нет записей для сохранения", window)
 		return
@@ -39,7 +39,7 @@ func exportRecords(window fyne.Window, records []models.SZIRecord) {
 	fileDialog.Show()
 }
 
-func writeRecordsCSV(output io.Writer, records []models.SZIRecord) error {
+func writeRecordsCSV(output io.Writer, records []domain.SZIRecord) error {
 	writer := csv.NewWriter(output)
 	headers := []string{
 		"Наименование", "Тип СЗИ", "Класс СВТ", "Уровень доверия", "Класс АС",
@@ -51,11 +51,10 @@ func writeRecordsCSV(output io.Writer, records []models.SZIRecord) error {
 	}
 	for _, record := range records {
 		row := []string{
-			record.Name, referenceType(record), referenceProtectionClass(record), record.TrustLevel,
-			record.ACClass, referenceVendor(record), valueOrFallback(record.Version, record.SoftwareVersion),
-			referenceCertificate(record), record.CertificationScheme, referenceIssueDate(record).Format("2006-01-02"),
-			referenceExpiryDate(record).Format("2006-01-02"), referenceLocation(record), record.ResponsiblePerson,
-			services.CalculateSziStatus(referenceExpiryDate(record), now()), record.Notes,
+			record.Name, record.SZIType, record.ProtectionClass, record.TrustLevel,
+			record.ACClass, record.Vendor, record.Version, record.CertificateNumber, record.CertificationScheme,
+			record.IssueDate.Format("2006-01-02"), record.ExpiryDate.Format("2006-01-02"), record.InstallLocation, record.ResponsiblePerson,
+			domain.StatusFor(record.ExpiryDate, time.Now()), record.Notes,
 		}
 		if err := writer.Write(row); err != nil {
 			return err
