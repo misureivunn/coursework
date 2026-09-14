@@ -25,9 +25,6 @@ func main() {
 	if err := normalizeLegacyReferenceFields(dbManager.DB); err != nil {
 		fmt.Printf("Не удалось обновить поля реестра: %v\n", err)
 	}
-	if err := seedDemoRecordsForExistingUsers(dbManager.DB); err != nil {
-		fmt.Printf("Не удалось добавить демонстрационные записи: %v\n", err)
-	}
 
 	myApp := app.NewWithID("szi.registry.coursework.v2")
 	applyCourseworkTheme(myApp)

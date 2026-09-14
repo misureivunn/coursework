@@ -38,10 +38,6 @@ func showLogin(myApp fyne.App, db *gorm.DB) {
 			message.SetText("Вход не выполнен. Проверьте имя пользователя и пароль")
 			return
 		}
-		if err := seedDemoRecords(db, user.ID); err != nil {
-			dialog.ShowError(fmt.Errorf("не удалось подготовить демонстрационные записи: %v", err), window)
-			return
-		}
 		window.Close()
 		showWorkspace(myApp, db, user)
 	})
