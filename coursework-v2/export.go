@@ -6,7 +6,7 @@ import (
 	"io"
 	"time"
 
-	"szi-registry/coursework-v2/internal/domain"
+	"coursework-v2/internal/domain"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/dialog"

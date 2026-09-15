@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"image/color"
 
-	"szi-registry/coursework-v2/internal/application"
+	"coursework-v2/internal/application"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"

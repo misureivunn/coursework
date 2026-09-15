@@ -3,9 +3,9 @@ package main
 import (
 	"fmt"
 
-	"szi-registry/coursework-v2/internal/application"
-	"szi-registry/coursework-v2/internal/config"
-	"szi-registry/coursework-v2/internal/storage"
+	"coursework-v2/internal/application"
+	"coursework-v2/internal/config"
+	"coursework-v2/internal/storage"
 
 	"fyne.io/fyne/v2/app"
 )

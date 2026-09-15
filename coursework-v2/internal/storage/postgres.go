@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"szi-registry/coursework-v2/internal/domain"
+	"coursework-v2/internal/domain"
 
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/postgres"

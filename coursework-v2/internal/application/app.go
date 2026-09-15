@@ -4,8 +4,8 @@ import (
 	"errors"
 	"time"
 
-	"szi-registry/coursework-v2/internal/domain"
-	"szi-registry/coursework-v2/internal/storage"
+	"coursework-v2/internal/domain"
+	"coursework-v2/internal/storage"
 
 	"gorm.io/gorm"
 )
