@@ -3,8 +3,8 @@ package main
 import (
   "fmt"
 
-  "szi-registry/coursework-v2/internal/application"
-  "szi-registry/coursework-v2/internal/domain"
+  "coursework-v2/internal/application"
+  "coursework-v2/internal/domain"
 
   "fyne.io/fyne/v2"
   "fyne.io/fyne/v2/container"
@@ -54,7 +54,7 @@ func showRecordForm(myApp fyne.App, app application.App, userID uint, record *do
   }
   form := widget.NewForm(widget.NewFormItem("Наименование СЗИ", name), widget.NewFormItem("Тип СЗИ", typeSelect), widget.NewFormItem("Класс защищённости СВТ", protection), widget.NewFormItem("Уровень доверия", trust), widget.NewFormItem("Класс АС", ac), widget.NewFormItem("Заявитель / разработчик", vendor), widget.NewFormItem("Версия ПО / исполнение", version), widget.NewFormItem("Номер сертификата", certificate), widget.NewFormItem("Схема сертификации", scheme), widget.NewFormItem("Дата выдачи", issue), widget.NewFormItem("Срок действия", expiry), widget.NewFormItem("Место установки", location), widget.NewFormItem("Ответственный сотрудник", responsible), widget.NewFormItem("Примечания", notes))
   form.OnSubmit = func() {
-    if name.Text == ""  typeSelect.Selected == ""  certificate.Text == "" {
+    if name.Text == "" || typeSelect.Selected == "" || certificate.Text == "" {
       dialog.ShowError(fmt.Errorf("заполните наименование, тип СЗИ и номер сертификата"), window)
       return
     }
